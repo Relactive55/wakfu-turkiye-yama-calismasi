@@ -857,11 +857,16 @@ def analyze(
     protected_value=False,
     protected_names=None,
     reviewed_key=False,
+    trusted_translation=False,
 ):
     canonical = CANONICAL_UI_TRANSLATIONS.get(key)
     if canonical is None:
         canonical = CANONICAL_DIALOG_TRANSLATIONS.get(key)
-    if canonical is not None and target != canonical:
+    # İnsan onaylı manual repair, sözlükteki eski/otomatik kanonik karşılıktan
+    # bilinçli olarak farklı olabilir. Öncelik manual > TM > glossary olduğundan
+    # bu kayıtlar kanonik sözlükle ezilmez; biçim ve diğer güvenlik kontrolleri
+    # aşağıda yine çalışmaya devam eder.
+    if canonical is not None and target != canonical and not trusted_translation:
         return "YANLIS_TERIM", f"Doğrulanmış arayüz karşılığı kullanılmalı: {canonical}", True
     visible_target = re.sub(r"https?://\S+", " ", visible_text(target))
     if key in REVIEWED_NONLEXICAL_KEYS:
@@ -1809,15 +1814,18 @@ def main():
             elif forced_item_name:
                 target = source
                 provider = "ORIJINAL_WAKFU_ADI"
+            elif key in manual_repairs:
+                target = str(manual_repairs[key])
+                provider = "ELLE_DOGRULANMIS_DUZELTME"
+            elif key in translations:
+                target = str(translations[key])
+                provider = live_methods.get(key, {}).get("method", "CEVIRI_BELLEGI")
             elif forced_term_key:
                 target = str(term_keys[key])
                 provider = "TERIM_ANAHTARI"
             elif forced_term_value:
                 target = str(term_values[source])
                 provider = "TERIM_SOZLUGU"
-            elif key in manual_repairs:
-                target = str(manual_repairs[key])
-                provider = "ELLE_DOGRULANMIS_DUZELTME"
             elif key in MANUAL_PROTECTED_TRANSLATION_KEYS and key in translations:
                 target = str(translations[key])
                 provider = "ELLE_DOGRULANMIS_KORUNAN_ACIKLAMA"
@@ -1830,9 +1838,6 @@ def main():
             elif source in term_values:
                 target = str(term_values[source])
                 provider = "TERIM_SOZLUGU"
-            elif key in translations:
-                target = str(translations[key])
-                provider = live_methods.get(key, {}).get("method", "CEVIRI_BELLEGI")
             else:
                 target = ""
                 provider = "YOK"
@@ -1862,6 +1867,7 @@ def main():
                         )
                     )
                 ),
+                trusted_translation=(provider == "ELLE_DOGRULANMIS_DUZELTME"),
             )
             if provider == "TERIM_SOZLUGU" and target.strip() == source.strip():
                 status, reason, issue = "CEVRILDI", "Terim Türkçede de aynı yazılır", False
@@ -1873,7 +1879,7 @@ def main():
                     (protected_key or protected_value)
                     and not (key in manual_repairs or forced_term_key)
                 )
-            ):
+            ) and provider != "ELLE_DOGRULANMIS_DUZELTME":
                 term_issue = terminology_problem(source, target, term_values)
                 if term_issue:
                     status, reason, issue = "TERIM_HATASI", term_issue, True

@@ -118,7 +118,12 @@ jobs:
               --title "${title}" --notes-file "${notes}" --prerelease
           else
             title="WAKFU Türkçe Yama ${RELEASE_TAG#tr-}"
-            printf 'Approved WAKFU Turkish patch %s.\n' "${RELEASE_TAG}" > "${notes}"
+            {
+              printf '%s\n' 'WAKFU Türkçe Yama'
+              printf 'Patch: %s\n' "${RELEASE_TAG#tr-}"
+              printf 'Uyumlu WAKFU: %s\n\n' '${{ inputs.game_version }}'
+              printf '%s\n' 'İlk stable otomatik dağıtım sürümü.'
+            } > "${notes}"
             gh release create "${RELEASE_TAG}" \
               "${RELEASE_DIR}/manifest.json" "${RELEASE_DIR}/i18n.jar" \
               --repo "${GITHUB_REPOSITORY}" --target "${GITHUB_SHA}" \

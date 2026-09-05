@@ -131,20 +131,20 @@ def rewrite_properties(data, translations, term_keys, term_values, phrases, manu
 
         candidate = None
         apply_phrases = True
-        if key in term_keys:
+        if key in manual:
+            candidate = str(manual[key])
+            apply_phrases = False
+        elif key in translations and str(translations[key]).strip():
+            candidate = str(translations[key])
+        elif key in term_keys:
             candidate = str(term_keys[key])
             apply_phrases = False
         elif source_term_forced:
             candidate = str(term_values[source])
             apply_phrases = False
-        elif key in manual:
-            candidate = str(manual[key])
-            apply_phrases = False
         elif source in term_values:
             candidate = str(term_values[source])
             apply_phrases = False
-        elif key in translations and str(translations[key]).strip():
-            candidate = str(translations[key])
 
         if candidate is None:
             output.append(line)

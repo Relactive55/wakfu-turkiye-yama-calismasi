@@ -163,7 +163,7 @@ static class ReleaseUpdaterTests {
             using (var server = ServerFor(routes)) {
                 var release = WakfuReleaseUpdater.GetLatestRelease(server);
                 var manifest = WakfuReleaseUpdater.GetManifest(release, server);
-                Require(String.Equals(manifest.PatchVersion, "2026.09.05.3", StringComparison.Ordinal), "full simulation patch version was not parsed");
+                Require(String.Equals(release.Tag, "tr-" + manifest.PatchVersion, StringComparison.Ordinal), "external Release tag does not match manifest patch version");
                 Require(String.Equals(manifest.SourceI18nSha256, Hash(source), StringComparison.OrdinalIgnoreCase), "full simulation source baseline hash differs");
                 typeof(WakfuSetupApp).GetMethod("TestInstallReleasedPatch", BindingFlags.Static | BindingFlags.NonPublic).Invoke(null, new object[] { game, release, manifest, server });
                 Require(WakfuReleaseUpdater.Sha256File(sourcePath) == manifest.Sha256, "full simulation i18n_en post-install hash failed");
@@ -171,7 +171,7 @@ static class ReleaseUpdaterTests {
                 string statePath = Path.Combine(state, "installed_patch.json");
                 Require(File.Exists(statePath), "full simulation installed_patch.json missing");
                 string stateText = File.ReadAllText(statePath, Encoding.UTF8);
-                Require(stateText.Contains("2026.09.05.3"), "full simulation installed patch version missing");
+                Require(stateText.Contains(manifest.PatchVersion), "full simulation installed patch version missing");
                 var stateMap = new System.Web.Script.Serialization.JavaScriptSerializer().Deserialize<Dictionary<string, object>>(stateText);
                 string backup = Convert.ToString(stateMap["backup_dir"]);
                 Require(File.Exists(Path.Combine(backup, "i18n_en.jar")), "full simulation i18n_en backup missing");
