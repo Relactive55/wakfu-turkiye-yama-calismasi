@@ -1,0 +1,15 @@
+{
+  "source_keys": {
+    "activatedMinSec": "Sonraki bölge meydan okumasına [#1] dk. [#2] sn.",
+    "content.33.115878": "[st2875] yokken:\\n[pl]Asgari Can Puanını [$1#1] değerine düşürür\\n[pl][$1$2ef]\\n[st2875] varken:\\n[pl][$2$1ef]",
+    "content.33.368107": "Yerleştirilen her İşaret için:\\n[pl][el6] iyileştirmesi: |[lv]*0.1+1|, hedefin çevresindeki 2 hücrelik [CROSS]\\n\\nAteş büyülerinin Menzili değişir:\\n[pl]Asgari Menzile +1\\n[pl]Değiştirilemez Menzil",
+    "content.33.397289": "Bu büyünün maliyeti <b>değişkendir</b>\\n\\nHedefe olan her hücre mesafesi için (en az 1):\\n[pl]Charge [#charac AP] 1 ek AP harcar\\n[pl][enemy] [$1$2$1$1ef]\\n[pl][caster] Hedefin yanına gelir\\n[pl][$1$4ef]\\n\\n[enemy] [st3492]",
+    "content.75.3695": "*Yaşlı adam pelerininin altından prizmatik yansımaları olan devasa beyaz bir yumurta çıkarır* Gözlerinden bunun ne olduğunu anladığını görüyorum... Evet, bu bir Dofus! Bu, uzun zaman önce unutulmuş bir dünyadan gelen Küçük Prizmatik Ejderha Nogord Wungleezared'ın Dofus'u... Ancak bu Dofus çok, çok zayıf... Onu nasıl güçlendireceğime dair bir fikrim var; işte sen de burada devreye giriyorsun!",
+    "content.93.361": "10 Küçük Shushu",
+    "craft.artisansBook.pref.minLvl": "Asgari Seviye",
+    "fight.duration": "Süre: ~{[>1]?[#1] dk.:}{[>2]?[#2] sn.:}",
+    "fight.duration.turnCount": "[#1] tur{[>1]?:} ({[>2]?[#2] dk. :}{[>3]?[#3] sn.:})",
+    "weather.info.minTemperature": "Asgari: [#1]°"
+  },
+  "statuses": []
+}

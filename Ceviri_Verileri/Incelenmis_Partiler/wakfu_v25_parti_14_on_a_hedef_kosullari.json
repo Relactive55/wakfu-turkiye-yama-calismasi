@@ -1,0 +1,22 @@
+{
+  "source_keys": {
+    "content.33.102889": "Bir oyuncu üzerinde: [se]",
+    "content.33.120297": "Bir oyuncu/canavar üzerinde: [se]\\n[pl]Takımın hedefini değiştirir",
+    "content.33.182779": "Bir oyuncu üzerinde: [$1ef]\\nBir canavar üzerinde: [$2ef]",
+    "content.33.193795": "Bir oyuncu karakteri üzerinde:\\n[$1ef]\\n[$2ef]",
+    "content.33.203576": "Bir canavar üzerinde: [se]",
+    "content.33.252272": "Savaş alanındayken:\\n[pl][$1ef]\\n[pl][$2ef]\\nGerekli seviye: 081-110",
+    "content.33.252279": "Savaş alanındayken:\\n[pl][$1ef]\\n[pl][$2ef]\\nGerekli seviye: 111-140",
+    "content.33.252351": "Savaş alanındayken:\\n[pl][$1ef]\\n[pl][$2ef]\\nGerekli seviye: 141-170",
+    "content.33.252386": "Savaş alanındayken:\\n[pl][$1ef]\\n[pl][$2ef]\\nGerekli seviye: 171-200",
+    "content.33.314966": "Bir oyuncu üzerinde:\\n[$1ef]",
+    "content.33.315731": "Bir oyuncu üzerinde:\\n[enemy] [$1$2$1ef] [CIRCLE] (2)",
+    "content.33.315738": "Bir oyuncu üzerinde:\\n[$1$1ef]",
+    "content.33.398690": "Bir oyuncu üzerinde:\\n[$1$2ef]\\n[$1$3ef]",
+    "content.33.410769": "\\n[st9170] durumundaki bir müttefik üzerinde:\\n[pl][$1ef]\\n[pl][$2ef]\\n[pl][$3ef]",
+    "content.33.410986": "Bir oyuncu üzerinde:\\n[ally][$1$2ef]\\n[$1$3ef]",
+    "content.33.412659": "Bir hedef üzerinde:\\n[pl][se]",
+    "content.33.412674": "Bir Mr. Punchy üzerinde:\\n[pl]Mr. Punchy'nin takımını değiştirir"
+  },
+  "statuses": []
+}

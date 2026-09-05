@@ -1,0 +1,18 @@
+{
+  "source_keys": {
+    "battleground.01.battlegroundBarDetailText": "<b color=\"D50000\" align=\"center\">Saldırı</b>\\nMalzemeler: <b color=\"D50000\">[#1]</b>\\n<b color=\"0026FF\" align=\"center\">Savunma</b>\\nMalzemeler: <b color=\"0026FF\">[#2]</b>",
+    "battleground.02.battlegroundBarDetailText": "<b color=\"D50000\" align=\"center\">Saldırı</b>\\nÇiçekler: <b color=\"D50000\">[#1]</b>\\n<b color=\"0026FF\" align=\"center\">Savunma</b>\\nÇiçekler: <b color=\"0026FF\">[#2]</b>",
+    "content.16.19906": "Bu taslak, Zırhçı mesleği için \"Sitton Savunması\" eşyasının tarifini öğretir.",
+    "content.24.-1983": "Bu son derece korkutucu etçil çiçekler çoğunlukla arılarla besleniyor! Bu zararlı bitkiler yayılırsa Tundra'nın hassas ekosistemi daha da büyük bir tehlikeye girebilir. Eldivenlerini ve en iyi budama makasını kap. Çevreye duyarlı bir bahçıvan olmanın vakti geldi. Ödülü almak için Kötülük Çiçekleriyle belirtilen sayıda etkileşime geç.",
+    "content.24.-1989": "Bu son derece korkutucu etçil çiçekler çoğunlukla arılarla besleniyor! Bu zararlı bitkiler yayılırsa Tundra'nın hassas ekosistemi daha da büyük bir tehlikeye girebilir. Eldivenlerini ve en iyi budama makasını kap. Çevreye duyarlı bir bahçıvan olmanın vakti geldi. En iyi ödülü almak için olabildiğince çok Kötülük Çiçeğiyle etkileşime geç.",
+    "content.24.-1992": "Bu son derece korkutucu etçil çiçekler çoğunlukla arılarla besleniyor! Bu zararlı bitkiler yayılırsa Tundra'nın hassas ekosistemi daha da büyük bir tehlikeye girebilir. Eldivenlerini ve en iyi budama makasını kap. Çevreye duyarlı bir bahçıvan olmanın vakti geldi. Ödülü almak için bütün Kötülük Çiçekleriyle etkileşime geç.",
+    "content.26.-1185": "Tekli: Sram Saldırısı!",
+    "content.33.303338": "Biriken Kaçınma: [#1]\\nBir müttefike Doğal Saldırı uygulamak, biriken Kaçınmanın tamamını ona verir",
+    "content.4.7979": "Bu büyü hedefi iter. Eniripsa Doğaya Karşı durumundaysa büyü bunun yerine hedefin çevresindekileri iter.",
+    "content.63.3243": "İlahi Boyuta git, Senkroportal Etkinleştirme görevini tamamla ve I.D.S. eserini geri al.",
+    "content.63.3610": "Yeni ulaştığın Üst Yamaç bölgesi işgal edilmiş gibi görünüyor. Uçurumun yanında sana saldıran Sacrierlardan bir açıklama istemenin vakti gelmiş olabilir mi?",
+    "content.67.1110": "\\n<text align=\"center\"><b>Etkinleştirme ve Devre Dışı Bırakma</b></text>\\n\\nŞeytani Paktlar şehirlerde bulunan pakt heykellerinden etkinleştirilebilir veya devre dışı bırakılabilir:\\n[#icon 164:center]\\n\\nBir Paktı etkinleştirdikten sonra kısa bir süreliğine diğer karakterlerin saldırılarına karşı bağışıklık kazanırsın.",
+    "content.9.1824": "Savunma Mekası, düşmanlarının çoğunun ateşini... onları ateşe vererek harlayacak.",
+    "gemType.description.DEFENSE": "Savunma Rünü Yuvası"
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "source_keys": {
+    "content.13.100516": "önceden kendini korur (Akıl Sağlığı)",
+    "content.33.114593": "Eğitmen, turunu bir rakiple yakın dövüşte bitirirse:\\n[pl]Görünmez olup kaçmasını sağlayan Gölgeli Pençe büyüsünü kullanır",
+    "content.33.164904": "[pl]Xelor tur başında Saat Hücresindeyse +[$1#2] Sv.",
+    "content.33.164906": "[pl]Xelor tur başında Geçerli Saat Hücresindeyse +[$1#2] Sv.",
+    "content.33.164908": "[pl]Xelor tur sonunda Saat Hücresindeyse +[$1#2] Sv.",
+    "content.33.164910": "[pl]Xelor tur sonunda Geçerli Saat Hücresindeyse +[$1#2] Sv.",
+    "content.33.164912": "[pl]+[$1$1#2] Sv.: Bir [enemy] üzerinden kaldırılan her AP başına",
+    "content.33.164914": "[pl]+[$1$1#2] Sv.: Bir [ally] verilen her AP başına",
+    "content.33.164916": "[st3799], [el3] atış büyülerinin alanını genişletir:\\n[pl]Hasar 3 hücrelik bir koniye yayılır\\n[pl]Hasarın yönü Rogue'un baktığı yöne bağlıdır\\n[pl]Yayılan hasar [#1]% azalır",
+    "content.33.164924": "2 farklı element büyüsü kullandıktan sonra:\\n[pl]Sıradaki üçüncü element büyüsünün verdiği hasar +[$1$1$1#1]%",
+    "content.33.164942": "[st3825] oluşturur:\\n[pl]+[$1$1$1#2] Sv.: Kazanılan her AP başına\\n[pl]+[$2$1$1#2] Sv.: Bir [ally] verilen her AP başına\\n[pl]+[$3$1$1#2] Sv.: Bir [enemy] üzerinden kaldırılan her AP başına\\n[pl]+4 Sv.: Bir [enemy] üzerinden kaldırılan her 10 İnisiyatif başına\\n[pl]+[$5$1#2] Sv.: Xelor tur sonunda Saat Hücresindeyse\\n[pl]+[$6$1#2] Sv.: Xelor tur sonunda Geçerli Saat Hücresindeyse\\n[pl]+[$7$1#2] Sv.: Xelor tur başında Saat Hücresindeyse\\n[pl]+[$8$1#2] Sv.: Xelor tur başında Geçerli Saat Hücresindeyse",
+    "content.33.177352": "Tur başında 2D6 kullanır",
+    "content.33.177370": "Tur başında 3D5 kullanır",
+    "content.33.177378": "Tur başında 4D4 kullanır",
+    "content.33.177385": "Tur başında 5D4 kullanır",
+    "content.33.177392": "Tur başında 6D3 kullanır",
+    "content.33.198317": "Saldırgan 4 hücreden daha uzaktaysa bir Kül Bulutu yerleştirir.\\n[pl]Menzil Bonusunu iptal eder\\n[pl]AP kullanımında Zehir",
+    "content.33.266778": "Shadofang gölgeni yavaş yavaş emer...\\nHer 5 turda azami Can Puanının belirli bir yüzdesi kadar nötr hasar",
+    "content.33.266901": "Kızıl güneş Shadofang'ın Düşen Gölgesini oluşturur\\nGüneşin dönüşü hızlanır",
+    "content.33.268122": "Tur başında, engellenmezse:\\n[pl]Düşen Gölgeye ışınlanır",
+    "notification.text.incarnam.souris": "Sol tık: Hareket Et\\nSağ tık: Etkileşime Geç"
+  }
+}

@@ -1,0 +1,72 @@
+name: Argos runtime verification
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: argos-runtime-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  argos-runtime:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      matrix:
+        python-version: ['3.10', '3.11']
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Set up Python
+        uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: requirements-translation.txt
+
+      - name: Create isolated runtime
+        run: python -m venv "$RUNNER_TEMP/argos-venv"
+
+      - name: Install exact translation runtime
+        run: |
+          "$RUNNER_TEMP/argos-venv/bin/python" -m pip install --disable-pip-version-check --no-input -r requirements-translation.txt
+          "$RUNNER_TEMP/argos-venv/bin/python" -m pip check
+
+      - name: Download and verify the locked model
+        env:
+          MODEL_PATH: ${{ runner.temp }}/translate-en_tr-1_5.argosmodel
+        run: |
+          "$RUNNER_TEMP/argos-venv/bin/python" - "$MODEL_PATH" <<'PY'
+          import hashlib
+          import json
+          import pathlib
+          import sys
+          import urllib.request
+
+          lock = json.loads(pathlib.Path("automation/model-lock.json").read_text(encoding="utf-8"))
+          expected_url = "https://argos-net.com/v1/translate-en_tr-1_5.argosmodel"
+          if lock.get("url") != expected_url or lock.get("sha256", "").lower() != "2d553a00880a0c21dea5b1c375535659e6bf18c9bf2ce9847c2a2fd2ff50316a":
+              raise SystemExit("model-lock.json is not the approved translate-en_tr 1.5 lock")
+          target = pathlib.Path(sys.argv[1])
+          urllib.request.urlretrieve(expected_url, target)
+          digest = hashlib.sha256(target.read_bytes()).hexdigest()
+          if digest != lock["sha256"].lower() or target.stat().st_size != int(lock["size_bytes"]):
+              raise SystemExit("Argos model size or SHA-256 mismatch")
+          print(f"ARGOS_MODEL_OK|{target.stat().st_size}|{digest}")
+          PY
+
+      - name: Run real EN to TR fixture with placeholder validation
+        env:
+          ARGOS_MODEL_PATH: ${{ runner.temp }}/translate-en_tr-1_5.argosmodel
+          ARGOS_MODEL_LOCK: ${{ github.workspace }}/automation/model-lock.json
+          ARGOS_DEVICE_TYPE: cpu
+          ARGOS_CHUNK_TYPE: MINISBD
+          XDG_CONFIG_HOME: ${{ runner.temp }}/argos-config
+          XDG_DATA_HOME: ${{ runner.temp }}/argos-data
+          XDG_CACHE_HOME: ${{ runner.temp }}/argos-cache
+        run: |
+          "$RUNNER_TEMP/argos-venv/bin/python" -m unittest automation.tests.test_argos_runtime -v

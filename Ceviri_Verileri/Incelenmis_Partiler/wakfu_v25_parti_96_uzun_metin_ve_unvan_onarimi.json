@@ -1,0 +1,25 @@
+{
+  "source_keys": {
+    "content.67.188": " \\n<text align=\"center\"><b>Aşırı Güçlü</b></text>\\n[#icon 94:center]\\nAşırı Güçlü, Sadida'nın ana Bebeğidir. Diğer bütün Bebekleri çağırmak için kullanılır ve kendine ait alan etkili bir saldırısı vardır.\\n\\n<text align=\"center\"><b>Voodoll</b></text>\\n[#icon 88:center]\\nVoodoll bir düşmana bağlanır. Bebeğe yapılan bütün tek hedefli saldırılar bağlı hedefe yönlendirilir.",
+    "content.67.225": " \\n[#icon 90:center]\\n<u>Madoll</u> - Mesafesini korumayı tercih eden Madoll, kendine özgü çığlığıyla düşmanların <b>Hareket Puanlarını</b> ve <b>Menzilini</b> azaltır.\\n[#icon 89:center]\\n<u>Engelleyici</u> - Bu Bebeğin fazla MP'si olmayabilir ancak <b>Sabitlemesi</b> son derece yüksektir. Tek amacı düşmanlara yapışıp hareket etmelerini önlemektir. Yavaş hareket etse de düşmanları kendine çeken bir büyüsü vardır.\\n\\n[#icon 95:center]",
+    "quest.nations.ch03.feedback.bookbad12": "** \"Gri Ay Günlükleri, Cilt XIV\"... ...\"Vissemeryd ve Ton Balığının Açlığı\"",
+    "quest.ereboria.zone.01.03": "**\"Ahtapot Pohl\" adlı birinden söz eden birkaç not buldum. Bu, korsan kaptanın lakabı olmalı.",
+    "content.75.5453": "*Gölgelerin Efendisi'nin yüzünden bir kuşku kıvılcımı geçer*\\n\\nGERİ DÖNMEK DE NE DEMEK, ÖLÜMLÜ{[1*]?:}? DAHA YENİ GELDİN!",
+    "content.75.5172": "*Son Gezgin, hem bedensel hem de ruhsal acıyla gözlerini kapatır. Gözyaşları süzülür. Zaman daralıyor. Düşmanına karşı zafer kazanmanın tek yolu onu öldürmekti*",
+    "content.75.6271": "*Rushu'nun nefret dolu bakışlarına bir an karşılık verir, sonra bir şey fark edersin. Zihninin içini göremesen de davranışları fazlasıyla doğrusal. Gölgelerin Efendisi yalnızca her şeyi yok etmek istiyor. Amacına ulaşmak için ihanet edip yalan söyler ama incelikli planlar kurabilir mi?*\\n\\n*Dehşet verici bir gerçeğin iliklerine kadar ürpertmesiyle birden durursun. Sthulhu'yu ve sana bir iblise asla güvenmemeni söyledikten sonra attığı kahkahayı hatırlarsın. Şaşkınlıkla soluklanırken onun uğursuz gülüşü zihninde yankılanır*",
+    "content.64.6038": "- İpeksi Savhanna ile konuş",
+    "stele.state.description.4846": "<b color=\"71CF2B\" align=\"center\">Dikilitaş 2: Sor'Hon'un Gazabı</b>\\n\\nPatron 2 Menzil ve 200 Element Direnci kazanır.",
+    "content.67.914": "<b> \\n \\n \\nNotlar:</b>\\n\\nİki dansçı Üçüncü Hareket'i tamamladığında Konsey'in halkın karşısına geçip yeni yıl yeminlerini etmesi gelenektir. Bu an aynı zamanda ziyafetin başlangıcını işaret eder.\\n \\nHer Dofus bir Ejderha tarafından yumurtlandı, ardından Tanrıça'nın Nefesi ile kutsandı. Dans, Dofuslar için bir ortaya çıkış sırası belirlese de bunun gerçek sıra olduğunu gösteren bir kanıt yoktur. İlk Doğanlar, aralarında bir hiyerarşi oluşmasını önlemek için aynı anda ortaya çıktıklarına inanmayı tercih eder.",
+    "content.67.729": "<text align=\"center\"><b>Güçlü Göz Kamaştırıcı Kemer</b></text>\\n\\nBilgi arayışıyla Dünya'yı dolaştıktan sonra geçmişten kalma bir yadigârı, Güçlü Göz Kamaştırıcı Kemer'i üretmek için gereken bütün malzemeleri sonunda topladın!\\n\\n<u><b>Güçlü Göz Kamaştırıcı Kemer:</b></u>\\nDerici: En az 100. Sv. \\n100 x Kör Edici Boya\\n1 x Hurdy Kuşak\\n1 x Beyaz Karga Kemeri\\n1 x Gobbalrog Kemeri\\n5 x Midalurgee\\n1 x Göz Kamaştırıcı Mühür",
+    "content.156.512": "<u><text align=\"center\">Rushu</text></u>\\n<text color=\"importantTextColor\">Gölgelerin Efendisi Rushu,</text> en büyük meydan okumayı kabul etmen için seni heybetli sarayında karşılıyor.\\n\\nGoultard ve Remington'ı yöneterek Shushu dalgalarıyla, ardından da Rushu'nun kendisiyle savaş!",
+    "quest.wabbit.conseil2.33": "Analizlewime göwe Sandyoptewa biwkaç yıl içinde yenilmez olacak.",
+    "quest.nations.ch04.end.cine.makamomie.12": "Harikulade Mimi'nin yetenekleri sayesinde yeni bir Orichalcum!",
+    "quest.nationch2.donjonaventure.Cinesalle3fin.Mimi.01": "Harikulade Mimi için bir zafer daha!",
+    "content.26.-1599": "Baş Canavar Damaskçı Boarnigen",
+    "quest.zinit.ch1.cine.otomai.antidote.38": "Harebourg Kalesi'nin Mezarlık Kulesi'ndeki Nostaljik Mezarcı da var...",
+    "content.33.328621": "Turunu Rüzgârın Biçicileri'nden en fazla 3 hücre uzakta bitirdiğinde:\\n[pl][$2$1$1ef] (Osamodas'a ait)",
+    "content.33.163743": "Tur sonunda:\\n[pl]Hedefi Zamana Karşı'nın üzerine ışınlar",
+    "content.26.-1426": "Baş Canavaw \"Kuwtulan Wipley\"",
+    "content.63.2768": "Jenry Hones Jr. ile Harikulade Mimi sayesinde çevren sağlam!\\nKendini fazlasıyla beğenen güzel bir Osamodas ve ona vurulmuş bir arkeosolog...\\nHer durumda sana yük olmadıkları sürece sorun yok... Bakalım \"Gobbowl cehennemi\" sözü gerçek miymiş..."
+  }
+}

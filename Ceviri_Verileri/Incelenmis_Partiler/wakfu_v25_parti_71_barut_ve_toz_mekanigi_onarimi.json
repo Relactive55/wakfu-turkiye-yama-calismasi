@@ -1,0 +1,19 @@
+{
+  "source_keys": {
+    "content.16.13345": "Bunu söylemek için üç saniyem var: Bu Kanoon Barutu boooooomba gibi!",
+    "content.16.27093": "Bilmece: Geri dönüştürülmüş atıklardan yapıldım. Neyim?\\na) Kayınvalide.\\nb) Toz.\\nc) Kayınvalidelerle ilgili klişe bir söz.\\nd) Yukarıdakilerin hepsi.",
+    "content.16.8414": "Bunu söylemek için üç saniyem var: Bu Kanoon Barutu boooooomba gibi!",
+    "content.33.264859": "[bomb]'ler bir Barut Duvarı oluşturmak için aralarında en fazla 5 hücre olacak şekilde yerleştirilmelidir.\\nTuruna Barut Duvarı üzerinde başlayan bir savaşçı şu kadar hasar alır:\\n[pl][el6] hasar: |[lv]*0.66+6|\\nBir [st5582] etkinleştirildiğinde Barut Duvarı'nı oluşturan [bomb]'ler:\\n[pl]1 seviye kaybeder\\n[pl]Seviye 1'in altına düşünce patlar",
+    "content.33.358366": "[$2ef]\\n\\n[bomb] üzerinde kullanıldığında:\\n[pl]Hasar [CROSS] alanına uygulanır\\n[pl][caster], [bomb]'a bitişik her savaşçı için 1 Barut kazanır (tur başına en fazla 3)\\n[pl][bomb] 1 seviye kaybeder",
+    "content.33.358390": "[$2ef]\\n\\n[bomb] üzerinde kullanıldığında:\\n[pl]Hasar [CROSS] alanına uygulanır\\n[pl][caster], [bomb]'a bitişik her savaşçı için 1 Barut kazanır (tur başına en fazla 3)\\n[pl][bomb] 1 seviye kaybeder",
+    "content.33.370126": "Boş bir hücreye <b>tek hedefli</b> bir büyü kullanıldığında:\\n[pl]Bir [bomb] yerleştirir\\n[pl][el1]: [st7935]\\n[pl][el3]: [st7936]\\n[pl][el4]: [st7937]\\n[pl][bomb]'un seviyesi büyünün maliyetine bağlıdır\\n[pl]Harcanan <b>Barut</b> miktarı büyünün maliyetine bağlıdır\\n[pl]En fazla 15 <b>Barut</b>\\n[pl]Takım başına sahada en fazla 7 [bomb]",
+    "content.4.6463": "Rogue bu büyüyü bir bomba üzerinde kullanabilir. Hasar bombaya bitişik hücrelerde tekrarlanır ve Rogue, vurulan her hedef için Barut kazanır.",
+    "content.4.6465": "Rogue bu büyüyle düşman hedefi öldürürse Barut kazanır.",
+    "content.4.6484": "Rogue artık Ruse ile mod değiştiremez; Barutu bittiğinde modu otomatik olarak değişir.",
+    "content.4.6486": "Rogue, Sneaky modunda Zırh kazanmak için Barutunu tüketir.",
+    "content.4.6487": "Rogue, bombaları aynı hatta ve aralarında 5 hücreden az mesafe olacak şekilde yerleştirerek Barut Duvarları oluşturabilir. Barut Duvarı, üzerinde turuna başlayan tüm savaşçılara hasar verir.",
+    "content.4.7063": "Rogue'un Barut rezervleri daha büyüktür; ancak bombaları artık kendiliğinden gelişmez.",
+    "content.4.7906": "Rogue, verdiği hasarı 2 tur boyunca artırmak için Barut rezervlerini tüketir."
+  },
+  "statuses": []
+}

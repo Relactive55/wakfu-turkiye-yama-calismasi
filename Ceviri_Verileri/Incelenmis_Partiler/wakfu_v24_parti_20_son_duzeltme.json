@@ -1,0 +1,12 @@
+{
+  "statuses": ["BICIM_HATASI", "EKSIK"],
+  "sources": {
+    "[$1#1]% damage received by [ally][bomb]": "[$1#1]% [ally][bomb] tarafından alınan hasar",
+    "[$1#1]% damage received by [enemy][bomb]": "[$1#1]% [enemy][bomb] tarafından alınan hasar",
+    "[caster] [$1#1]% damage received by [ally][bomb]\\n[ally] [$2#1]% damage received by [ally][bomb]": "[caster] [$1#1]% [ally][bomb] kaynaklı hasar alır\\n[ally] [$2#1]% [ally][bomb] kaynaklı hasar alır",
+    "[$2ef]\\n[$5$1$1ef] the [bomb] [CROSS]": "[$2ef]\\n[$5$1$1ef] [bomb] için [CROSS]",
+    "{[1*]?:}Beefy{[1*]?:}": "{[1*]?:}Kaslı{[1*]?:}",
+    "{[1*]?:}Pursuer{[1*]?:}": "{[1*]?:}Takipçi{[1*]?:}",
+    "{[1*]?:}Manic{[1*]?:}": "{[1*]?:}Çılgın{[1*]?:}"
+  }
+}

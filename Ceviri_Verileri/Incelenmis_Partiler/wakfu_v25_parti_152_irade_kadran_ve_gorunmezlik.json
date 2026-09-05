@@ -1,0 +1,25 @@
+{
+  "source_keys": {
+    "content.156.382": "İrade; ekipmanlar, yetenekler veya özel beceriler kullanılarak artırılabilir.",
+    "content.33.254539": "[$1$1ef]\\n[$1$2ef]\\n\\n[caster][#charac WILLPOWER] Büyü süresince sahip olunan her rün başına +10 İrade",
+    "content.4.5568": "Bu, Enutrof sınıfından alınan \"Kürek Sallayıcı\" büyüsüdür. Huppermage önündeki düşmanlara hasar verir ve onların MP'sini azaltır. Sahip olduğu rün sayısına bağlı olarak büyü süresince İrade bonusu kazanır.",
+    "content.4.7188": "Geçerli Saat, Xelor'un AP azaltma yeteneğini geliştiren bir İrade bonusu verir. Ancak Xelor artık yalnızca Geçerli Saatten veya Dakiklik durumuna sahipken AP azaltabilir.",
+    "content.4.775": "Bedeli çok düşük olan bu büyü, Xelor'un İradesini bir turluğuna artırır; böylece azaltmalara direnci ve AP/MP azaltma yeteneği güçlenir. Xelor daha sonra hedeften AP azaltmaya çalıştığında büyü daha da etkili olur.",
+    "content.33.165735": "Kendi [paw] üzerinde:\\n[pl]Tur başında azami Can Puanının %10'u kadar Zırh\\nBir [ally] üzerinde:\\n[pl]Tur başında azami Can Puanının %5'i kadar Zırh\\nKorur: 25 Sv. [st3839]",
+    "content.75.7225": "*Kadim ejderha seni sakince süzer. Zihninde bir fısıltı duyarsın: Patronlar, Onikiler Dünyası'nı istila etmek için zindanlarından çıktı... Meydan okumayı kabul edecek misin?*",
+    "content.33.176260": "Mevcut Can Puanı &lt; %50 ise:\\n[pl][$1ef]",
+    "content.33.124750": "Azami Can Puanının %20'si kadar Zırh ekler [caster]",
+    "content.33.121628": "[$2ef]:\\nAzami Can Puanının %20'si kadar Zırh ekler [caster]",
+    "content.4.7214": "Bu pasif, Sacrier'in Can Puanı çok düşükken zor durumlardan kurtulmasını büyük ölçüde kolaylaştırır. Ancak mevcut Can Puanı yüksekken iyileştirilmesi daha zordur.",
+    "content.4.5195": "Bu pasif, Sacrier'in Can Puanını daha iyi yönetmesini sağlar. Sacrier bir hedefe hasar verdiğinde, hedefin Can Puanı yüzdesi kendisininkinden yüksekse verdiği hasarın bir kısmıyla Can çalar. Sacrier'in Can Puanı yüzdesi hedefinkinden yüksekse kendisine Alev Geri Tepmesi uygular.",
+    "content.67.240": "\\n<text align=\"center\"><b>Sacrier'in Kanı</b></text>\\n\\nAldığı hasardan güç kazanan kana susamış savaşçılar\\n\\n<text align=\"left\">Karmaşıklık</text>[#icon 121:center]\\n####\\n[#icon 34:center]Sacrierların temel özelliği, Onikiler Dünyası'ndaki en yüksek <b>Can Puanı</b> potansiyeline sahip olmalarıdır.\\nÇeşitli hareket büyüleri sayesinde savaş alanında çok hızlı yer değiştirebilirler.\\nYüksek <b>Can Puanları</b>, her darbe aldıklarında <b>Öfke</b> biriktirip güçlenmelerini sağlar. Ayrıca hasarı kolayca karşılayabilir ve müttefikleri adına darbe alabilirler.",
+    "content.67.253": "\\n<text align=\"center\"><b>Görünmezlik</b></text>\\n\\nSram, <b>Görünmezlik</b> kullanarak düşmanlarının gözleri önünde bütünüyle kaybolabilir. Ancak dikkat: Her büyü kullanıldığında Sram'ın o anda bulunduğu yeri gösteren bir işaret belirir.\\n\\nKurnaz bir Sram, son eylemlerinden sonra kullanmak üzere Hareket Puanı saklar ve yanıltıcı bilgiler vererek düşmanlarını kandırır.\\n\\nHareketlilik ve suikast uzmanı Sramlar, daha fazla hasar vermek için düşmanların arkasına geçmeye çalışır. Tehlikede kaldıklarında tuzakları veya <b>Ganimeti</b> kullanmayı, düşmanlardan Can çalmayı ve <b>Görünmezliği</b> savunma amacıyla kullanmayı tercih ederler.",
+    "incarnam.tuto.ui.spell.active.4.infos": "Element büyülerine ek olarak bazı nötr büyülere de sahipsin. Bunlardan ilki, rakiplerinin tam olarak nerede olduğunu bilmesini engelleyen Görünmezliktir.",
+    "content.33.162117": "<b>Özellikler:</b>\\n[pl]Ecaflip'in azami Can Puanının %25'i\\n[pl]Ecaflip'in Direncinin %100'ü\\n[pl]Kilitleyemez\\n[pl]Takım başına en fazla 2 Kedi Ağacı\\n\\nEcaflip, Kedi Ağacının tepesindeyken:\\n[pl][#1] Menzil\\n[pl][#2]% gerçekleştirilen iyileştirme\\n[pl]-[#2]% verilen hasar\\n\\nKedi Ağacının tepesine [sp7953] ile tırmanılabilir",
+    "content.33.357971": "Ecaflip'in oyunda bir [st3730] durumu varsa:\\n[pl]|[#7.2]*100|% oranında verilen [el3] Hasarla Can çalar",
+    "content.33.312887": "<b>Geçerli Saat</b>, <b>30 İrade</b> bonusu verir\\n\\nAP azaltmaları yalnızca <b>Geçerli Saatten</b> veya\\n[st7814] ile uygulanabilir",
+    "content.33.313198": "[se]\\n\\nXelor turuna Geçerli Saat üzerinde başlarsa, üzerindeki Hasar artışını sabitleyen Dakiklik durumunu kazanır",
+    "content.67.246": "\\n<text align=\"center\"><b>Kadran</b></text>\\n\\nDövüşün başında açılan bir büyü, çevresinde 12 <b>Saat Hücresi</b> oluşturan bir Kadran çağırabilir.\\n\\nXelor yalnızca <b>1 Wakfu Puanı</b> harcayarak bir Saat Hücresinden diğerine geçebilir. <b>Geçerli Saatte</b> kalır veya turuna orada başlarsa büyük bir hasar bonusu kazanır.\\n\\nAynı anda Xelor başına yalnızca bir Kadran çağrılabilir. Kadranın kendi Can Puanları vardır ve saldırılarla yok edilebilir.",
+    "breed.role.desc.5.5": "Xelor'un yetenekleri, Kadran üzerinde hızla hareket etmesini ve rakiplerinin konumunu büyük ölçüde kontrol etmesini sağlar."
+  }
+}

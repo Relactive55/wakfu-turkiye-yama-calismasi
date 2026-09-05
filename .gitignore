@@ -1,0 +1,37 @@
+# WAKFU proprietary game data and generated distributions
+Oyun_Kaynaklari/
+Uretilenler/
+Dagitim/
+Yedekler/
+Raporlar/
+Ayarlar/
+Araclar/
+*.jar
+*.exe
+*.rar
+*.zip
+
+# Python and local runtime state
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+automation/.runtime/
+automation/.downloads/
+automation/*.tmp
+
+# Test/download/install residue must never enter the clean repository.
+work/
+temp/
+tmp/
+backup/
+backups/
+installed_patch.json
+**/installed_patch.json
+*.argosmodel
+*.onnx
+*.pt
+
+# The tracked state and compressed snapshots contain metadata only.
+!automation/state.json
+!automation/snapshots/.gitkeep

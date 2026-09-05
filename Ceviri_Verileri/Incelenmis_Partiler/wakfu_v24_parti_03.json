@@ -1,0 +1,50 @@
+{
+  "statuses": [
+    "INGILIZCE_KALINTISI",
+    "TERIM_HATASI",
+    "EKSIK"
+  ],
+  "keys": {
+    "content.33.351381": "[caster][ally] bir Portal kullandığında:\\n[pl][$1$1$2ef] (turda 1)\\n[pl]2 AP\\n\\nPortallar yalnızca bir savaşçıya bitişik yerleştirilebilir"
+  },
+  "sources": {
+    "At start of turn:\\n[pl][$1ef] (melee damage)": "Tur başında:\\n[pl][$1ef] (yakın dövüş hasarı)",
+    "Wall of Water": "Su Duvarı",
+    "Wall of Earth": "Toprak Duvarı",
+    "Woyal Bow of Pwodding": "Pwodding'in Woyal Yayı",
+    "Small Ogrest's Tear": "Küçük Ogrest'in Gözyaşı",
+    "Freezammers' Amulet": "Freezammerların Muskası",
+    "Grougaloragran's Shield": "Grougaloragran'ın Kalkanı",
+    "General Kra Kleure's Bow": "General Kra Kleure'ün Yayı",
+    "Sigrid of Korussant's Breastplate": "Korussantlı Sigrid'in Göğüslüğü",
+    "Draconiros's Amulet": "Draconiros'un Muskası",
+    "Imagirorukam's Wand": "Imagirorukam'ın Asası",
+    "Mimi the Marvelous's Boots": "Muhteşem Mimi'nin Çizmeleri",
+    "Corrupted Hero Headgear": "Yozlaşmış Kahraman Başlığı",
+    "Corrupted Hero Shoes": "Yozlaşmış Kahraman Ayakkabıları",
+    "Necroworld Signet Ring": "Necroworld Mühür Yüzüğü",
+    "Sacred Fire Sword": "Kutsal Ateş Kılıcı",
+    "Bworkana Clan Talisman": "Bworkana Klanı Tılsımı",
+    "Dial Hand: Dial Management": "Kadran İbresi: Kadran Yönetimi",
+    "Black Wabbit Costume": "Kara Wabbit Kostümü",
+    "Reincarnation of the Empelol": "Empelol'un Yeniden Doğuşu",
+    "Gobball Spirit Transformation": "Gobball Ruhu Dönüşümü",
+    "Brakmarian Archaosologist Costume": "Brakmarlı Arkaosolog Kostümü",
+    "Rise and Shine": "Uyan ve Parla",
+    "Southern Tree - 3rd Floor": "Güney Ağacı - 3. Kat",
+    "Eastern Tree - 3rd Floor": "Doğu Ağacı - 3. Kat",
+    "Eastern Tree - Ground Floor": "Doğu Ağacı - Zemin Kat",
+    "Secret of the Mists": "Sislerin Sırrı",
+    "Bow Meow Transformation": "Bow Meow Dönüşümü"
+  },
+  "target_replacements": {
+    "Ultimate Boss": "Nihai Baş Canavar",
+    "Nihai Boss": "Nihai Baş Canavar",
+    "Ultimate": "Nihai",
+    "spotted": "fark edilmiş",
+    "Dark Hurl": "Karanlık Uluma",
+    "Portals": "Portallar",
+    "nemesis": "karşıt",
+    "Snowbound Village": "Karla Kaplı Köy"
+  }
+}

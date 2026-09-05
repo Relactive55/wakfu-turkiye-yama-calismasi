@@ -1,0 +1,31 @@
+{
+  "source_keys": {
+    "content.33.114811": "[ally] üzerinde kullanıldığında [se]",
+    "content.33.114812": "[caster] üzerinde kullanıldığında [se]",
+    "content.33.165560": "[undrake] ise:\\n[enemy] üzerinde kullanıldığında: [$1$1ef]\\nBoş bir hücrede kullanıldığında:\\n[pl][$1$2$1$2$1ef] [st3838] veya [paw] çevresinde\\n[pl][st3838] veya [paw] ışınlanır\\n[pl][st3838] kaldırılır\\n[drake] ise:\\n[pl][$2$1$1ef]\\nKendi [paw] nesnesinde kullanıldığında:\\n[pl][$2$2$1$1ef] [caster] çevresinde\\n[pl][paw] ile yer değiştirir",
+    "content.33.165583": "[undrake] ise:\\n[enemy] üzerinde kullanıldığında: [$1$1$1ef]\\nBoş bir hücrede kullanıldığında:\\n[pl][st3838] veya [paw] ışınlanır\\n[pl][$1$2$1$2$2ef] [st3838] veya [paw] çevresinde\\n[pl][st3838] kaldırılır\\n[drake] ise:\\n[enemy] üzerinde kullanıldığında: [$2$1$1ef]\\nKendi [paw] nesnesinde kullanıldığında:\\n[pl][paw] ile yer değiştirir\\n[pl][$2$2$2$1ef] [caster] çevresinde",
+    "content.33.166148": "Kendi [paw] nesnesinde kullanıldığında:\\n[pl]Yaratığın çağrısını sonlandırır\\n[caster] üzerinde kullanıldığında:\\n[pl]Taşınan tüm bonusları kaldırır\\n[pl][st3839] başlangıç seviyesine döner",
+    "content.33.167362": "[$2ef]\\n[st3877] üzerinde kullanıldığında:\\n[pl][$1$1ef]",
+    "content.33.167366": "[$2ef]\\n[st3877] üzerinde kullanıldığında:\\n[pl][$1$1ef] (en fazla 4 kez)",
+    "content.33.167426": "[$2ef]\\n[st3877] üzerinde kullanıldığında:\\n[pl][$1$4ae] 2 hücre çeker (Blockade çevresinde)\\n[pl][$1$3ef]",
+    "content.33.242747": "Bir Suret üzerinde kullanıldığında:\\n[pl][se]\\n[pl]Artık Fear dışında büyü kullanamaz",
+    "content.33.297420": "[enemy] üzerinde kullanıldığında: [se]",
+    "content.33.309827": "[$2$2ef]\\n\\nBir taret üzerinde kullanıldığında:\\n[pl]Etki alanı [CROSS] (2) olur",
+    "content.33.309889": "\\n[ally] üzerinde kullanıldığında: [se]",
+    "content.33.312604": "Kadran üzerinde kullanıldığında:\\n[pl][se]",
+    "content.33.328815": "[paw] [st7134] üzerinde kullanıldığında:\\n[pl][paw] 4 MP\\n[pl][paw] 4 Menzil\\n[pl][paw] Turun sonunda ölür\\n\\nSahada geçirdiği her tur için:\\n[pl][paw] %10 verilen hasar\\n[pl][paw] %10 yapılan iyileştirme\\n[pl][caster] 1 WP",
+    "content.33.333299": "[ally] üzerinde kullanıldığında:\\n[pl][$1$2ef]\\n\\nMagmog üzerinde kullanıldığında:\\n[pl][$1ef]\\n\\nLav üzerinde kullanıldığında:\\n[pl]Lavı kaldırır",
+    "content.33.342648": "\\n[ar978] üzerinde kullanıldığında:\\nBitişik raylarda [ar1473] (Sv. [$2#2])",
+    "content.33.342740": "Boş bir hücrede kullanıldığında:\\n[pl][$2$1ef] (hedeflenen hücreye doğru düz bir çizgide)\\n[pl][$5ef]\\n\\n[caster] üzerinde kullanıldığında:\\n[pl][st6279] ile [st6280] durumlarının yerini değiştirir\\n[pl]3 AP iade eder",
+    "content.33.342817": "\\n[ally] üzerinde kullanıldığında: [se]\\n[pl]1 seviye [st6280] harcar",
+    "content.33.343120": "Yalnızca görüş hattı olmadan kullanılabilir\\n\\n[enemy] [$2$2ef]\\n\\nBir taret üzerinde kullanıldığında:\\n[pl]Etki alanı [SQUARE] olur",
+    "content.33.346451": "Büyünün hedefi en yakın <b>Microbot</b> üzerine gider (en fazla 4 hücre)\\n\\n<b>Microbot</b> üzerinde kullanıldığında:\\n[pl][st7649] onun üzerine ışınlanır (en fazla 8 hücre)",
+    "content.33.351043": "\\nBir portal üzerinde kullanıldığında:\\n[pl][$1$1ef] her portalın çevresinde\\n\\nBu büyü bir portaldan geçemez",
+    "content.33.357478": "[st7916] varsa:\\n[pl][st7917] durumuna girer\\n\\n[st7917] varsa:\\n[pl][st7916] durumuna girer\\n\\nRogue dışındaki bir hedefte kullanıldığında:\\n[pl][$2$3ef] [fighter] hedefiyle",
+    "content.33.357985": "[#1]:\\n[pl]1 AP'ye düşer\\n[pl][ally] üzerinde kullanılabilir\\n[pl][ally] üzerinde kullanıldığında: 1 MP",
+    "content.33.359761": "[ally] üzerinde kullanıldığında:\\n[pl][st7952] (2 tur, en fazla 1 hedef)\\n\\n[enemy] üzerinde kullanıldığında:\\n[pl][st7953] (2 tur, en fazla 1 hedef)",
+    "content.33.377379": "[enemy] üzerinde kullanıldığında: [fighter] [$1$1ef]\\nAksi hâlde: [fighter] [$2ef]",
+    "content.33.377938": "[$2ef]\\n[puppet] üzerinde kullanıldığında:\\n[pl]Etkiler [CROSS] (1) alanına dönüşür\\n[pl][caster] çağrıları etkilenmez"
+  },
+  "statuses": []
+}

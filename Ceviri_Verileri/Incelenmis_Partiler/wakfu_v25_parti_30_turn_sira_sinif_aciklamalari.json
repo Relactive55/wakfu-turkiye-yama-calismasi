@@ -1,0 +1,25 @@
+{
+  "source_keys": {
+    "content.4.1542": "Bu büyü hedeften Can çalar: ilk kez kullanıldığında, ikinci kez hedefin turunun sonunda.",
+    "content.4.4607": "Sram Double'ı çağırdığında onunla yer değiştirir; turunun sonunda Double ile yeniden yer değiştirir.",
+    "content.4.4798": "Iop turunu bir düşmana bakarak bitirirse ikisi de 1 tur boyunca büyük miktarda Direnç kazanır.",
+    "content.4.5579": "Huppermage'in Rünleri geçicidir ve turun sonunda kaybolur; böylece Rünlerini farklı biçimlerde yönetebilir.",
+    "content.4.6270": "Ouginak en güçlü zehrini düşmanına uygular... Hedef turunu Ouginak ile yakın dövüşte bitirirse ek hasar alır!",
+    "content.4.6277": "Ouginak darbelere dayanma yeteneğini artırmak için verdiği hasarın bir kısmından vazgeçer. Can Puanı ve Alınan Zırh kazanır. Turunun başında Avına bitişikse ayrıca Zırh kazanır.",
+    "content.4.6479": "Rogue'un değerli yardımcısı Boombot'ı güçlendirir. Boombot AP ve MP kazanmanın yanı sıra Rogue'un Bombaları dışındaki savaşçıları da hedefleyebilir; ancak turunun sonunda ölür.",
+    "content.4.6925": "Foggernaut turun başında tüm WP'sine sahipse MP ve Menzil bonusu kazanır.",
+    "content.4.7322": "Osamodas'ın çağrısı büyük bonuslar kazanır, ancak turunun sonunda ölür.",
+    "content.4.7720": "Eliotrope artık turuna Calm modunda başlayarak hasar kazanmaz; bunun yerine MP ve Element Direnci kazanır. İyileştirme yapıldığında Celestial Gift de tüketilir ve iyileştirmeyi güçlendirir.",
+    "content.4.776": "Bu büyünün hedefi turunun sonunda, turuna başladığı hücreye ışınlanır. Hücrede bir engel varsa hedef engelle yer değiştirir.",
+    "content.4.783": "Dolaylı hasar veren bir durum uygular. Büyü hedefinin turunun başında Xelor, hedefe ve bitişiğindeki düşmanlara alan hasarı verir; ayrıca etki alanındaki diğer kum saatlerini tetikler.",
+    "content.4.7987": "Eniripsa turunu bitirdiğinde Propagator'ını tüketerek kendisini ve yakındaki müttefiklerini iyileştirir.",
+    "content.4.8275": "Enutrof Drhellzerker modundayken Treasures artık turun sonunda WP vermez; bunun yerine element büyüleri Menzil bonusu kazanır.",
+    "content.4.8276": "Enutrof turun sonunda Treasures'ını tüketerek Zırh kazanır.",
+    "content.4.8280": "Drheller, Enutrof'un turun sonunda sahip olduğu Treasures seviyesine bağlı olarak AP ve MP kazanır. Buna karşılık turunu bir düşmanın yakın dövüş menzilinde bitirirse ölür.",
+    "content.4.8415": "Iop turun sonunda Wrath durumunun seviyesine bağlı olarak WP ve Preparation yeniler. Ancak Concentration ile artık anında WP yenilemez.",
+    "content.4.921": "Bu büyü bir çağrıyı saydamlaştırır; çağrı artık görüş hattını engellemez. Hedef Sadida'nın Bebeklerinden biriyse Bebek turunun sonunda ek bir Nettled seviyesi kazanır. Büyü bir Tohuma kullanılırsa Sadida kalıcı hasar bonusuna sahip bir Greedy çağırır.",
+    "content.4.930": "Bu büyü ya bir müttefiki iyileştirir ya da bir düşmana hasar verirken 1 MP kaldırır. Büyü bir Tohuma kullanılırsa Sadida, turun sonunda çevresindeki hedeflerden MP kaldıran bir Block çağırır.",
+    "content.9.1584": "Hedef turunun başında hasar alır."
+  },
+  "statuses": []
+}

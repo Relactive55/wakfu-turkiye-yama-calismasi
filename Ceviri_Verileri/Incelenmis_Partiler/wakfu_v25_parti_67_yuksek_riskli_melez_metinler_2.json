@@ -1,0 +1,22 @@
+{
+  "source_keys": {
+    "desc.mru.feca.armor.01": "\"Zırh\" Görselini etkinleştir",
+    "content.16.24380": "Raval'ın Element Kuleleri hakkında Oropo'ya sunduğu rapor.",
+    "content.64.9970": "Görevi tamamla: Grampar'da Panik",
+    "shortcutEffect.tutorialBook": "Rehberler Kitabı",
+    "encyclopedia.monster.type.CHALLENGE": "Görev Canavarları",
+    "content.10.826": "Her [#1] Öfke puanı için 1 RA artışı\\nKullanılan her RA için: -[#1] Öfke",
+    "content.33.179798": "Hedef, arkadan yapılacak bir sonraki saldırıda Yıkıcı Hasar vermek üzere Eliotrope tarafından Wakfu İzi ile işaretlenir.",
+    "content.4.802": "Last Rampart, büyüyü kullanana koruma sağlar ve hemen etkisini gösterir.",
+    "content.4.4588": "First Blood, henüz Hemorrhage etkisi olmayan düşmanlara yüksek miktarda Hemorrhage uygular. Hemorrhage, Sram hedefe doğrudan hasar verdiğinde ek hasar verir. Bu büyü Weak Point üretir.",
+    "quest.astrub.tonneauplante.rules.desc01": "\\nHedefler: \\n\\n • Yabani Ot İlacı Fıçısını Kaos Bitkisinin yanına götürmelisin\\n • Fıçıyı istediğin yönde hareket ettirmek için Push-Barrel büyüsünü kullan\\n • Fıçı bir engele çarpana kadar gidebildiği kadar ilerler\\n• Tüm Kaos Bitkileri yabani ot ilacıyla temizlendiğinde raundu kazanırsın",
+    "quest.huppermage.salle.inondee.tutorial.desc": "Su basmış odanın diğer tarafına olabildiğince çabuk ulaş.\\n\\nDikkat: Oksijen göstergen tamamen boşalırsa boğulursun!\\n\\nBulduğun Dallı Çiçek sayesinde yolundaki hava kabarcıklarını emerek oksijen göstergeni artırabilirsin.",
+    "guildExplanation14": "Lonca Nişanının Lonca Bankasında kullanılabilen otomatik gelişimi.",
+    "content.24.-2254": "Arkaosologlara göre Nox Makinelerinin bölgesi, Xelor gelmeden önce bir deniz alanıydı. Görünüşe göre Crabstacean türleri eskiden burada gelişmiş. Geri dönmeleri önemsiz görünebilir, ancak Nox ile bu intikamcı yaratıklar arasındaki bir savaşın ciddi hasara yol açacağı açık. Nox'la daha sonra ilgilenip önce bölgedeki nüfusu yeniden oluşturmak daha akıllıca olur. Ödülü toplamak için hepsini yok et.",
+    "quest.nations.ch03.feedback.encyclosphero": "** \"Sferolitik Ansiklopedi\"... ...\"Yarıçap, çevre ve sinüzoidallik\"...",
+    "quest.nations.ch03.feedback.bookbad09": "** \"Tarikat Derlemesi, Cilt XI\"... ...\"Ogrest Tarikatı ve Dathura'nın Kız Kardeşleri\"",
+    "content.16.20236": "Bu taslak, Kuyumculuk mesleği için \"Şaman Yumurtası\" eşyasının tarifini öğretir.",
+    "desc.mru.sliptorium.quest.book": "Bir kitap ödünç al (50 Toz gerekir)"
+  },
+  "statuses": []
+}

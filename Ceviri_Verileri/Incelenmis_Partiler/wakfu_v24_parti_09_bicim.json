@@ -1,0 +1,12 @@
+{
+  "statuses": ["BICIM_HATASI"],
+  "sources": {
+    "[Flag] Fury": "[Flag] Hiddet",
+    "[Flag] Fortress": "[Flag] Kale",
+    "[Flag] Resilience": "[Flag] Dayanıklılık",
+    "[Flag] Vivacity": "[Flag] Canlılık",
+    "[Flag] Domination": "[Flag] Hâkimiyet",
+    "[Flag] Overkill": "[Flag] Aşırı Güç",
+    "[SERGEANT] Mechanical": "[SERGEANT] Mekanik"
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "source_keys": {
+    "content.33.397486": "Iop doğrudan hasar aldığında:\\\\n[pl][el0] Hasarı: [$3#1] (saldırgan başına 1 kez)\\\\n[pl][caster] [#charac PW] 2 WP\\\\n[pl]Hasar, son kullanılan büyünün elementine dayanır",
+    "content.33.397494": "Iop doğrudan hasar aldığında:\\\\n[pl][el0] Hasarı: [$3#1] (saldırgan başına 1 kez)\\\\n[pl][caster] [#charac PW] 2 WP\\\\n[pl]Hasar, son kullanılan büyünün elementine dayanır",
+    "content.33.397504": "Iop doğrudan hasar aldığında:\\\\n[pl]1 azami MP (1 tur) (en fazla 5 kez tetiklenir)",
+    "content.33.398314": "[sp8404] büyüsü kullanıldığında:\\\\n[pl][caster] AP maliyeti iade edilir\\\\n[pl][caster] AP maliyeti sonraki turun başında kaybedilir",
+    "content.33.412159": "Bir savaşçı Gigantegg'e hasar verdiğinde:\\\\n[pl][$1ef] (2 tur)",
+    "content.33.412206": "Young Wild Sow, bitişiğindeki bir [enemy] düşmandan hasar aldığında:\\\\n[pl]Young Wild Sow 4 hücre geriye itilir",
+    "content.33.98353": "<b>Geçerli saat</b> [sp5345] etrafında tam tur attığında:\\\\n[pl]Gecikmeli etkiler anında uygulanır",
+    "content.4.3435": "Crackmite'in Canı %20 veya altına düştüğünde Polar Crackern onu paramparça ederek feda eder; yakın dövüşteki düşmanlara hasar verir ve Cracklerları iyileştirir",
+    "content.4.4300": "Krosmoglob Suya hâkim olduğunda, Glob'un yaptığı iyileştirmenin %10'u en çok yaralanmış müttefike gider. Glob Havaya hâkim olduğunda ise hedef en büyük hasarı alır, ancak Glob da karşılığında bir miktar hasar alır.",
+    "content.4.5102": "Iop sancağını çağırdığında yakındaki hedefler Iop'a çekilir. Bravery Standard büyüsü 1 Menzil kaybeder.",
+    "content.4.5455": "Coney öldüğünde bulunduğu hücrede bir glif belirir. Bunun karşılığında Coney'nin maliyeti artar.",
+    "content.4.6948": "Cra, Sharpened Arrowhead'i elde ettiğinde Precision Shot etkisindeyse MP'yi AP'ye dönüştürür. Precision Shot kullanmamışsa bunun yerine AP'yi MP'ye dönüştürür.",
+    "content.4.6950": "Cra Precision Shot etkisindeyken Precision tüketen büyüleri, verdikleri hasarın %25'i kadar Can Çalar. Ancak Precision Shot tur başına yalnızca bir kez kullanılabilir.",
+    "content.4.7752": "Cra Precision Shot moduna girdiğinde, büyülerinin etkilerini güçlendirmek için Precision tüketebilir.",
+    "content.4.7994": "Propagator tetiklendiğinde Eniripsa hedeften 1 MP Çalar. Bunun karşılığında Eniripsa'nın Propagator üretimi yarıya iner.",
+    "content.75.7052": "Zulnara, Timo ve ben makinelere karşı üstünlük sağladığımızı gördüğümüzde, gelip saat ustasına karşı sana yardım etmenin daha iyi olacağına karar verdik.\\\\n\\\\nGerisini zaten biliyorsun.",
+    "content.9.1699": "Crackchok buzlu zırhını kaybettiğinde, zırh yeniden oluşana kadar amansız bir öfkeye kapılır.",
+    "content.9.1901": "Clammer Shark'ın Canı yarıya düştüğünde şunları kazanır: \\\\n+%20 Hasar\\\\n+1 AP\\\\n+15 CH",
+    "content.9.3300": "Pandawa Merry durumundayken saldırı yetenekleri artar.",
+    "content.9.3301": "Pandawa Worn-Out durumundayken Blok ve MP kazanır ancak verdiği hasar azalır.",
+    "content.9.3474": "Iop Concentrating durumundayken Wakfu yeniler ve sonraki saldırıya hazırlanır.",
+    "content.9.599": "Gobball'lar yaralandığında öfkelenir ve çok daha tehlikeli hâle gelir.",
+    "content.9.600": "Gobball'lar yaralandığında öfkelenir ve çok daha tehlikeli hâle gelir."
+  },
+  "statuses": []
+}

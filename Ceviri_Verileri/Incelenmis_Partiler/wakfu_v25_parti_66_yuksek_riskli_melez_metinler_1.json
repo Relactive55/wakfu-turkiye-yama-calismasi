@@ -1,0 +1,22 @@
+{
+  "source_keys": {
+    "quest.halouine.rabatteur.02": "Turuncu, turuncu, turuncu! Her yerdeler! Hayat turuncu, la di da di da...",
+    "brumes.collector.canyon.end": "Cosmo Canyon Sanctuary Golem aniden devre dışı kaldı!\\n\\nMuhtemelen bir sunudan daha fazla kaynağa ihtiyacı var.",
+    "dungeon.tour.key.tutorial.desc": "Mineral Tower'a girmek için bir Feca Efsunu gerekir!\\nBurası diğer zindanlara benzemez.\\nKuleye girdiğinde Efsun tüketilir.\\nDışarı çıkarsan Efsununu kaybedersin.\\nÇok dikkatli ol!",
+    "quest.zinit.ch2.cine.cryo.porte.05": "Kapı açılmıyor; sistem çok fazla hasar görmüş. Son Eser işte burada işe yarayacak.",
+    "companionBackgroundText.3081": "Yetenekli Explorancient, Tanrısal Gücü tanrıların erişemeyeceği bir yerde saklamak için kendi hafızasını silmeye yönelik ayrıntılı bir plan hazırladı. Kökenlerini keşfetmek üzere Tanrısal Boyutları araştırırken bizzat Sram'la karşı karşıya geldi. Seni kıl payı kurtardıktan sonra görevine onunla birlikte devam etmene karar verdi.",
+    "quest.nowel.cant.enter.dj1": "Father Kwismas'ın Atölyesine girmek için iznin yok. Belki kıyafetlerini bulursan fikrini değiştirir...",
+    "quest.nationch3.bibliofire.gankr.01": "Mükemmel! Gobbowlium Kodeksi bende...",
+    "nation.vote.candidateRegistration.error": "Kayıt yapılamıyor. Mavi 597A formu geçersiz. Lütfen C gişesine gidin.",
+    "quest.kelba.qp.Chapitre2": "Kelba\\n-Bölüm 2-\\nCrobak Yuvasının Üzerinden Biri Uçtu",
+    "content.4.1152": "Tofoone yumurtasını hedefin yakınındaki bir hücreye gönderir. Yumurta patlar ve içinden bir Baby Tofu çıkar.",
+    "content.9.5663": "Kırmızı bir güneş, Shadofang'in Cast Shadow'unu oluşturur.",
+    "fightLootTax": "Ganimet vergilendirildi",
+    "tuto.xelor.planque.description": "Sram'ın Yardımcıları gölgelere gizlenir. Bölgeyi aydınlatmak için avizelere bir büyü yap, ardından Yardımcılara saldır!",
+    "stele.state.description.4185": "<b color=\"71CF2B\" align=\"center\">Dikilitaş 2: Tempest</b>\\n\\nBüyülerin AP ve WP maliyetini 1 artırır.\\nBir büyü kullanmak 1 MP kaldırır",
+    "content.33.100803": "Taşıyıcı, hedefe verilen Hasarın %30'unu alır",
+    "content.33.104465": "Mevcut HP %40'tan az: Bonus yok\\nMevcut HP %20'den az: Bonus yok\\n1 HP: Bonus yok",
+    "content.67.838": "\\n<text align=\"center\"><b>\\nHuppermage Rünü</b></text>\\n\\nBir element büyücüsü ve rün ustası\\n\\nKarmaşıklık[#icon 123:center]\\n##\\nHuppermage'ler, Wakfu Puanlarının yerini alan <b>Dört Element Esintisi'nden</b> güç çeken bilgin büyücülerdir.\\nEn büyük güçleri, yıkıcı Işık büyüleri oluşturmak ve sıra dışı güçlere sahip <b>rünler</b> yaratmak için yönlendirdikleri <b>dört element</b> üzerindeki ustalıklarıdır.\\n\\nUzaktan ağır hasar verebilir ve rünlerini dikkatle kullanarak zorlu durumlardan kurtulabilirler."
+  },
+  "statuses": []
+}

@@ -1,0 +1,24 @@
+{
+  "source_keys": {
+    "group.party.lootMode": "Ganimet dağıtım modu",
+    "property.fight.desc.100": "Her savaşın sonunda ganimet",
+    "security.returned.loot.title": "Ganimet iade edildi",
+    "content.13.316695": "[#1] Ganimet Bulma (Ganimet İksiri)",
+    "content.16.17314": "Bir gün Wabbit'ların aklına bir fikir geldi: Ganimeti neden mızrakla avlamayalım? Harika fikir! Artık Cawwot'larının yanında balık da yiyebilirler.",
+    "content.16.22779": "Bir gün Wabbit'ların aklına bir fikir geldi: Ganimeti neden mızrakla avlamayalım? Harika fikir! Artık Cawwot'larının yanında balık da yiyebilirler.",
+    "content.16.22780": "Bir gün Wabbit'ların aklına bir fikir geldi: Ganimeti neden mızrakla avlamayalım? Harika fikir! Artık Cawwot'larının yanında balık da yiyebilirler.",
+    "content.67.252": "[#icon 36:center]\\nBazı Sram Ateş büyüleri hasar vermenin yanı sıra <b>Hemorrhage</b> durumunu uygular. Kurban her tur, durumun seviyesine orantılı hasar alır. Durum, <b>Cold Blood</b> ile Can çalmak için tetiklenebilir.\\n[#icon 35:center]\\nSu dalındaki büyüler <b>Ganimet</b> üretmek için kullanılabilir. Ganimet daha sonra Sram'a veya müttefiklerine bonus, rakiplerineyse ceza sağlamak için tüketilebilir.\\n[#icon 32:center]\\nHava dalı hasar vermenin yanı sıra <b>hareketlilik</b> sağlar. Düşmanlardan uzaklaşmak, arkalarına geçmek veya onları itmek için kullanılabilir.",
+    "content.67.253": "\\n<text align=\"center\"><b>Invisibility</b></text>\\n\\nSram, <b>Invisibility</b> kullanarak düşmanlarının gözleri önünde tamamen kaybolabilir. Ancak dikkat: Her büyü kullanıldığında Sram'ın o an bulunduğu yeri gösteren bir işaret belirir.\\n\\nUsta bir Sram, son eylemlerinden sonra kullanmak üzere Hareket Puanı saklar ve yanıltıcı bilgilerle düşmanlarını şaşırtır.\\n\\nHareketlilik ve suikast uzmanı Sramlar daha fazla hasar vermek için düşmanların arkasına geçmeye çalışır. Tehlikede kaldıklarında tuzakları veya <b>Ganimet</b> kullanmayı, düşmanlardan Can çalmayı ve <b>Invisibility</b> yeteneğini savunma amacıyla kullanmayı tercih ederler.",
+    "content.65.375": "Hey, yeni bir büyünün kilidini açtın! Daha fazla bilgi için Büyü Kitabını kontrol et.",
+    "content.121.187": "Magus Ax'ın Kitabı",
+    "content.121.385": "Sumorse Kitabının Çevirisi",
+    "content.156.226": "Adlarını hatırlamak ve çevrimiçi olup olmadıklarını görmek için arkadaşlarını <text color=\"importantTextColor\">Kişi Defterine</text> ekle.",
+    "content.156.481": "<u><text align=\"center\">WAKFU 1.91 Güncellemesine Hoş Geldiniz!</text></u>\\n1.91 Güncellemesi çeşitli arayüzleri iyileştiriyor: <text color=\"importantTextColor\">Makine,</text> <text color=\"importantTextColor\">Zindanlar,</text> <text color=\"importantTextColor\">Ulaşım,</text> <text color=\"importantTextColor\">Ekipman Önizlemesi</text> ve <text color=\"importantTextColor\">Kişi Defteri.</text>\\nAyrıca <text color=\"importantTextColor\">Sram yenilemesi</text> ve çeşitli oyun içi yaşam kalitesi iyileştirmeleri de bulunuyor.",
+    "notification.questReward": "Görev ödülü",
+    "protector.wallet.context.name.0": "Görev Fonu",
+    "quest.Kelba.convoistart.rules.title": "Kelba - Ana Görev - Konvoy",
+    "quest.Kelba.Mirandafirst.rules.title": "Kelba - Ana Görev - Haksız Rekabet",
+    "quest.kelba.port.convoi.title": "Kelba - Ana Görev - Paketi Yeniden Toplama"
+  },
+  "statuses": []
+}

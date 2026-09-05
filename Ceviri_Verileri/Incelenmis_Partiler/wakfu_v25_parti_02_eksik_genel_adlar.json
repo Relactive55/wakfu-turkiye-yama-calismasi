@@ -1,0 +1,32 @@
+{
+  "keys": {
+    "content.106.175": "Silah Fıçısı"
+  },
+  "sources": {
+    "Tailor's Workshop": "Terzi Atölyesi",
+    "Jeweler's Workshop": "Kuyumcu Atölyesi",
+    "Miner's Workshop": "Madenci Atölyesi",
+    "Trapper's Workshop": "Tuzakçı Atölyesi",
+    "Hazieff's Workshop": "Hazieff'in Atölyesi",
+    "Sylargh's Workshop": "Sylargh'ın Atölyesi",
+    "To Mount Zinit": "Zinit Dağı'na",
+    "Fisherman's Shed": "Balıkçı Kulübesi",
+    "Bag of Seeds": "Tohum Çantası",
+    "Armorer's Workshop": "Zırh Ustası Atölyesi",
+    "Tanner's Workshop": "Derici Atölyesi",
+    "Florist's Workshop": "Çiçekçi Atölyesi",
+    "A mount?": "Bir binek mi?",
+    "Moon Relic Recipe": "Moon Reliki Tarifi",
+    "Harvest Monk I": "Hasat Keşişi I",
+    "Harvest Monk II": "Hasat Keşişi II",
+    "Harvest Monk III": "Hasat Keşişi III",
+    "Mount Zinit Reefs": "Zinit Dağı Resifleri",
+    "Mount Zinit Peak": "Zinit Dağı Zirvesi",
+    "Climb Mount Zinit": "Zinit Dağı'na Tırman",
+    "Charm a Snake": "Bir Yılanı Büyüle",
+    "Bag of Bones": "Kemik Torbası",
+    "Pile of Books": "Kitap Yığını"
+  },
+  "target_replacements": {},
+  "statuses": ["EKSIK"]
+}

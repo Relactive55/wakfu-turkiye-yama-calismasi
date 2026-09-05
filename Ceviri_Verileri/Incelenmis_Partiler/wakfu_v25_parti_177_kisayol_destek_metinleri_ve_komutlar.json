@@ -1,0 +1,19 @@
+{
+  "keys": {
+    "desc.actionShortcutsNext": "Sonraki kısayol satırı",
+    "desc.options.bindText": "Kısayola atanacak metni girin:",
+    "question.confirmBindedTest": "\"[#1]\" metnini kullanarak bir kısayol oluşturmak istediğinizden emin misiniz?",
+    "question.swapShortcutsKey": "Bu tuş birleşimine zaten bir kısayol atanmış. Yine de devam etmek istiyor musunuz?",
+    "error.shortcutItemDropNotPossible": "Bu öğe buraya bırakılamaz.",
+    "desc.changeShortcutBarMode": "Dünya/Dövüş modunu değiştir",
+    "desc.shortcut.type.0": "Dövüş dışı",
+    "desc.shortcut.type.2": "Dövüş eşyaları",
+    "desc.shortcut.type.3": "Yaratığın büyüleri",
+    "command.worldPosition": "Konumunuz: ([#1], [#2], [#3]), örnek kimliği [#4].",
+    "command.away.disabled": "Artık uzakta olarak işaretli değilsiniz.",
+    "command.away.enabled": "Artık uzakta olarak işaretlendiniz. Bu moddan çıkmak için komutu tekrar kullanın.",
+    "command.error.away": "Uzakta moduna geçilemedi; otomatik yanıt metni tanımlamalısınız.",
+    "shortcutEffect.almanax": "Almanax",
+    "shortcutEffect.osamodasSymbiot": "Osamodas'ın Gobgob'u"
+  }
+}

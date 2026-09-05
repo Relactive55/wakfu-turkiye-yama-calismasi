@@ -1,0 +1,19 @@
+{
+  "name": "WAKFU v25 Parti 106 - Görev, eğitim ve bina metinleri",
+  "source_keys": {
+    "content.75.2071": "Kalenin anahtarı mı? Ne için? Daha acil işlerimiz var! Burada gördüğün herkesi tedavi et, \\nsonra anahtarı konuşuruz...",
+    "content.75.2334": "O haklı evlat. Astrub'u yeniden kurmak için her zaman fazladan iş gücüne ihtiyacımız var. Paralı askerlerimin hepsi önemli işlerle meşgul. Bana biraz Odun Kütüğü getirebilir misin? Eski Kerestehane'nin yakınlarında bulabilirsin.",
+    "content.75.3584": "Şunu dinle: Sidimote Bozkırları'nın Klan Üyesi yaşlı Moe Kneetorks'un Bonta'da akrabaları olabilirmiş! Üstelik içlerinden biri, ünlü Enutrof ailesinin bütün servetini ve mülklerini miras almış.\\nZavallı Moe, geçinebilmek için ağır işlerde çalışmak zorunda kalmış... Gerçek adı neydi? Groub? Groot? Sprout? Trude?\\nAh! Stroud! Stroud'du! En azından bana söylenen bu.",
+    "content.75.4932": "TÜM YARATIKLARI YENDİĞİNDE İKİNCİ BİR DALGA BELİRECEK. BU İKİNCİ DALGAYI AŞARAK BİR \"PATRON\" DALGASI BAŞLAT. ENDİŞELENME. PATRONLARIN CANI, ZİNDANLARDAKİNDEN DAHA AZ OLACAK.\\n\\nPATRONLARI YENDİKTEN SONRA, TURLAR BİTENE YA DA SEN YENİLENE KADAR HER ŞEY BAŞTAN BAŞLAR, ZAVALLI ÖLÜMLÜ{[1*]?:}.\\n\\nANCAK TANRILAR CÖMERTLİKLERİYLE BİLİNİR; ÇİFT SAYILI TURLARDA SAVAŞ BONUSLARI, TEK SAYILI TURLARDA PUAN BONUSLARI ALABİLİRSİN.",
+    "content.76.4900": "Bilbiplaj canavarlarıyla uğraşırken sana yardım etmek istiyorum.",
+    "content.76.4901": "Bilbiplaj canavarlarıyla uğraşırken sana yardım etmek istiyorum.",
+    "content.76.4902": "Bilbiplaj canavarlarıyla uğraşırken sana yardım etmek istiyorum.",
+    "content.86.128": "Kama Basma Makinesini Yeniden İnşa Etme",
+    "content.86.144": "Yemliği Yeniden İnşa Etme",
+    "content.86.250": "Kerestehane Konteyneri",
+    "quest.Kelba.convoistart.rules.desc": "Uyarı!\\n\\nGöreve devam edip Kutu Taşıyıcısı'nı yakalarsan bir dövüş başlar. Dövüş başladıktan sonra, konvoy örneğinde yanında olmayan grup üyeleri bütün konvoy aşamaları tamamlanana kadar —başarılı olsan da olmasan da— sana katılamaz.\\n\\nKutu Taşıyıcısı'nı yakalamadan önce onları bekle.",
+    "quest.amakna.mercenary.plantes.01.01": "**Toprak kuru. Görünüşe göre bu Hızlandırılmış Büyüme, toprağa zarar verebilir.",
+    "quest.huppermage.sokoban.tutorial.desc": "Oyunun amacı bütün Sandıkları vurgulanmış hücrelerin üzerine yerleştirmektir.\\n\\nBunu yapmak için bir Sandığı bir hücre hareket ettiren \"İtme\" büyüsünü kullanmalısın.\\n\\nHata yaparsan son \"İtme\" büyüsünü \"Geri Al\" büyüsüyle geri alabilirsin. Sıkıştığını düşünüyorsan dövüşten vazgeçip baştan başlamalısın.",
+    "quest.nations.ch04.sokoban.tutorial.desc": "Oyunun amacı bütün Sandıkları vurgulanmış hücrelerin üzerine yerleştirmektir.\\n\\nBunu yapmak için bir Sandığı bir hücre hareket ettiren \"İtme\" büyüsünü kullanmalısın.\\n\\nHata yaparsan son \"İtme\" büyüsünü \"Geri Al\" büyüsüyle geri alabilirsin. Sıkıştığını düşünüyorsan dövüşten vazgeçip baştan başlamalısın."
+  }
+}

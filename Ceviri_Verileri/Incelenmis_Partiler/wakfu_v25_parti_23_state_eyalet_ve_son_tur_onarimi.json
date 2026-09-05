@@ -1,0 +1,32 @@
+{
+  "source_keys": {
+    "critere.hasState": "\"[#1]\" durumunda{[-1>2]? [#2]. seviyeden itibaren:}",
+    "critere.hasStateFromLevel": "\"[#1]\" durumunda, en az [#2]. seviye",
+    "end.turn": "Turu Bitir",
+    "options.displayAppliedStateName": "Karakterlere uygulanan durumların adlarını göster",
+    "question.willUnapplyState.2": "Bu eşyayı kullanmak [#1] ve [#2] durumlarını kaybetmenize neden olur.\\nDevam etmek istediğinizden emin misiniz?",
+    "content.9.89": "Bu durumdaki müttefik bir hasar büyüsüne maruz kalırsa Sacrier hasarı onun yerine alır ve onunla yer değiştirir.",
+    "content.9.1084": "Kendini ne hâllere sokuyorsun!",
+    "content.10.822": "Bu tur harcanan Öfkenin [#1]%'ini yeniler",
+    "content.10.845": "Durum uygulama şansı: [#1]%",
+    "content.33.93600": "Bilby Queen, büyüyü kullanan kişi durumun seviyesine eşit uzaklıkta değilse alınan hasarın %100'ünü yansıtır.",
+    "content.33.101705": "Turun başında:\\n[pl][st2066] [st2067] [st2068] [st2069] durumlarını kaldırır\\n[pl]Bir düşmanın yanına ışınlanır",
+    "content.33.118758": "Durum 6. seviyedeyken:\\n[pl][$1ef]",
+    "content.33.120210": "[st3107] ve [st3108] durumlarına sahip değilse:\\n[pl][$1ef]",
+    "content.33.136622": "Durum boyunca artık kırmızı takımdaki bir [ar780] tarafından ışınlanamaz",
+    "content.33.136623": "Durum boyunca artık mavi takımdaki bir [ar780] tarafından ışınlanamaz",
+    "content.33.150347": "Bu durumdakiler 20. seviyede sonraki vuruşta hedefin MP'sini kaldırır.\\nKorunması için durum her tur yeniden uygulanmalıdır.",
+    "content.33.152878": "Bu durumdakiler nakavt olacaksa:\\n[pl]Hasarı onların yerine Black Crow alır",
+    "content.33.167966": "Bu durumdakiler azami seviyede öldürülürse:\\n[pl]Foggernaut için +1 WP",
+    "content.33.342396": "Durumun 5. seviyesinde Feca <b>1 WP yeniler</b>\\n\\nBir kalkan tetiklendiğinde:\\n[pl]+4 Inner Peace seviyesi\\n\\nBir [st6440] tetiklendiğinde:\\n[pl]Savaş alanındaki her Feca Glifi için +1 Inner Peace seviyesi",
+    "content.47.24183": "Rakibinizin durumlarına dikkat etmelisiniz! Alıştırmayı tamamlamak için durumlarımın gerektirdiği eylemleri uygulayın.",
+    "content.64.10611": "Durumlarla ilgili testi tamamla",
+    "content.75.2543": "Teşekkür ederim! Bu hâlimde onları yenmekte zorlanırdım. Köyü terk etmemize onlar neden oldu. Keşif ekibinin diğer üyeleri çevreyi araştırmak ve yerleşebileceğimiz yeni bir yer bulmak için batıya gitti.",
+    "content.156.87": "Savaşçılar farklı sürelerde etkili olan <text color=\"importantTextColor\">durumlardan</text> etkilenebilir.",
+    "content.156.88": "Karakterinizin durumları ekranın üst kısmında görünür.\\n\\nBaşka bir savaşçının durumlarını <text color=\"importantTextColor\">savaşçı sayfasında</text> görebilirsiniz.",
+    "content.156.293": "Savaşçılar farklı sürelerde etkili olan <text color=\"importantTextColor\">durumlardan</text> etkilenebilir.",
+    "content.156.294": "Karakterinizin durumları ekranın üst kısmında görünür.\\n\\nBaşka bir savaşçının durumlarını <text color=\"importantTextColor\">karakter sayfasında</text> görebilirsiniz.",
+    "content.156.433": "Birkaç yeni özellik eklendi:\\n\\nArtık her sınıfın AP, MP ve WP'nin yanında görünen bir <text color=\"importantTextColor\">özel niteliği</text> bulunuyor. Ayrıca <text color=\"importantTextColor\">durumlar favorilere eklenebilir (sol tık)</text> ve kalbin yanında görüntülenebilir. Dünya haritası da güncellendi."
+  },
+  "statuses": []
+}

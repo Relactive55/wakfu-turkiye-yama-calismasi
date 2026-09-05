@@ -1,0 +1,26 @@
+{
+  "source_keys": {
+    "content.62.2989": "Bu Bir Yarış I",
+    "content.62.2993": "Bu Bir Yarış II",
+    "content.62.3801": "Bu Bir Yarış III",
+    "content.62.3810": "Bu Bir Yarış IV",
+    "content.62.3819": "Bu Bir Yarış V",
+    "content.62.3831": "Bu Bir Yarış VI",
+    "content.62.3838": "Bu Bir Yarış VII",
+    "content.62.3853": "Bu Bir Yarış VIII",
+    "content.62.3857": "Bu Bir Yarış IX",
+    "content.62.3867": "Bu Bir Yarış X",
+    "content.62.3635": "Bu Bir Yarış XI",
+    "content.62.3902": "Bu Bir Yarış XII",
+    "content.62.3596": "Bu Bir Yarış XIII",
+    "content.64.7868": "Başarımı tamamla: Bu Bir Yarış III",
+    "content.64.7909": "Başarımı tamamla: Bu Bir Yarış IV",
+    "content.62.834": "Kwiiiiismas Geldi",
+    "event.nowel.questRequired": "Kwismas Dünyası'na girmeden önce ‘Kwiiiiismas Geldi’ görevini tamamlamalısın.",
+    "content.3.2798": "Vampirleşme",
+    "content.13.269519": "[se] (Vampirleşme)",
+    "lyongameshow.vampyro.fight.desc": "Vampyro'ya önden saldırıldığında, her dövüşçünün turunda bir kez:\\n- 666 Can Puanı yeniler\\n- 40 Element Direnci kaybeder (sonsuz)\\n- Saldıran oyuncuya Vampirleşme uygular\\n\\n4. turda:\\n- Vampyro kendisine en yakın oyuncuyu <b>platforma</b> yerleştirir\\n\\n8. turda:\\n- Vampyro dövüşü bitirir\\n\\nVampyro'nun Can Puanı %20'nin altına düştüğünde Karanlık Güç durumunu kazanır.",
+    "content.75.4263": "Ah, savaşa katılmaya mı{[1*]?:} geldin... Evet, Amakna Milisleri Riktus kuvvetleriyle mücadele edecek yeni askerler arıyor.\\nMagik Riktuslar birkaç ay önce güney Amakna'ya ulaştı! Bermuda Üçgeni'nde huzur içinde yaşarken şimdi Verimli Çayır limanına demir attılar. Bu haydutlar başkentte saldırılar düzenlemeye çalıştı; surlarımızın dibinde bizimle savaşıyorlar!",
+    "content.75.6050": "İnali adına, halklayımız alasındaki anlaşmanın Wa'nın söylediği bir yalana dayandığını söyleme sakın...\\n\\nEdindiğin Dofus hakkında uzmanlığını paylaşabilecek bilini tanımıyor musun?"
+  }
+}

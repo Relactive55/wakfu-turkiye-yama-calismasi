@@ -1,0 +1,29 @@
+{
+  "name": "WAKFU v25 Parti 114 - Vali arayüz ve unvanları",
+  "source_keys": {
+    "content.156.231": "Topluluk bölümündeki <text color=\"importantTextColor\">Politika</text> düğmesini veya <text color=\"importantTextColor\">N</text> kısayolunu kullanarak ulusunun <text color=\"importantTextColor\">Hükümet</text>ini görebilirsin. \\n\\nHükümet, ulus vatandaşlarının seçtiği Vali tarafından atanır. Görev süresi 15 gündür.",
+    "content.156.335": "Bir maceracı olarak istersen <text color=\"importantTextColor\">bir ulusa katılmakta</text>, istersen tek başına ilerlemekte özgürsün. Bir ulusa bağlı olmanın bazı avantajları vardır. Yasalarına uymak sana <text color=\"importantTextColor\">vatandaşlık puanları</text> kazandırır. Ulusun <text color=\"importantTextColor\">siyasi yaşamına</text> katılmak, kuralları değiştirmek için <text color=\"importantTextColor\">Valiliğe</text> aday olman konusunda sana ilham verebilir.",
+    "content.16.11284": "Güneş ışınlarını hafifçe yansıtan bu apoletler, Vali'yi bile gölgede bırakacak nitelikte. ",
+    "content.16.11577": "Chafer Kralı'nın şapkasıyla Vali olmaya uygun göründüğünü sanıyorsun, ama aslında yalnızca budala gibi görünüyorsun.",
+    "content.16.15002": "Bu çizmeleri giydiğinde ünlü Bonta Valisi kadar canlı ve hareketli olacaksın.",
+    "content.16.15554": "Brakmar'daki Terk Edilmiş Strichery'nin zemininden alınmış göz alıcı bir madalyon. Kuş kafesini yaptıran Vali, bunu en güzel örnekleri için saklamış.",
+    "content.16.20684": "Belle Époque'un büyük Valisi Francis, tadım sırasında Apileri Apiwoodlarla karıştırdığı için öldü. Yakından bakarsan birkaç diş izi görebilirsin.",
+    "content.34.780": "Brakmar'ın İlkel{[1*]?:} Valisi",
+    "content.34.782": "Sufokia'nın İlkel{[1*]?:} Valisi",
+    "content.34.783": "Amakna'nın İlkel{[1*]?:} Valisi",
+    "content.34.908": "Brakmar'ın Neo İlkel{[1*]?:} Valisi{[1*]?:}",
+    "content.34.910": "Sufokia'nın Neo İlkel{[1*]?:} Valisi{[1*]?:}",
+    "content.34.911": "Amakna'nın Neo İlkel{[1*]?:} Valisi{[1*]?:}",
+    "content.49.20110086": "Vali az önce hava koşullarını değiştirdi.",
+    "content.49.20110087": "Sanırım Vali çayırdaki hava koşullarını değiştirdi.",
+    "content.63.2008": "Valiliğe aday olmak güzel, ama seçilmek daha da güzel! Ulusunun Valisi ol!",
+    "content.64.4238": "Valinin Mezarında Saygını Sun",
+    "content.65.83": "Bak, yeni bir Vali seçimi başladı!\\nAcele et ve oyunu kullan! En yakın Klan Üyesine gidip vatandaşlık görevini yerine getir!",
+    "content.65.85": "Ha! Yeni bir Vali seçilmeli!\\nHaydi, onlara gerçek bir Stasis liderinin neler yapabileceğini göster!\\nYa da en azından dengesizliği savunan birine oy ver.",
+    "content.65.86": "Ah! Yeni bir Vali seçilmeli!\\nBu, Ulusa biraz denge getirmek için bir fırsat!\\nSeçime aday ol ya da bir Wakfu destekçisine oy ver.",
+    "content.66.64101": "Brakmar Valilik Merkezi",
+    "content.66.64201": "Bonta Valilik Merkezi",
+    "content.66.64301": "Sufokia Valilik Merkezi",
+    "content.66.64401": "Amakna Valilik Merkezi"
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "parti": "WAKFU v25 - Sandık, sepet ve kese metinleri",
+  "source_keys": {
+    "content.106.1012": "Dağınık Sandık",
+    "content.106.1201": "Hacimli Sandık",
+    "content.106.1527": "Hokka Sandığı",
+    "content.106.542": "Zinit Numuneleri Sandığı",
+    "content.106.697": "İşaretli Sandık",
+    "content.161.27": "Cawwot Sandığı",
+    "content.24.-1984": "Bir ticaret gemisi Buz Kütlesi açıklarında battı ve taşıdığı sandıklar acımasız Pingwinlerin arasına, kıyıya vurdu. Pingwinler sırf kötülük olsun diye parçalamadan önce değerli olabilecek bu sandıkları kurtarmak sana düşüyor. Ödülü almak için belirtilen sayıda Batık Sandığı'yla etkileşime geç.",
+    "content.24.-1990": "Bir ticaret gemisi Buz Kütlesi açıklarında battı ve taşıdığı sandıklar acımasız Pingwinlerin arasına, kıyıya vurdu. Pingwinler sırf kötülük olsun diye parçalamadan önce değerli olabilecek bu sandıkları kurtarmak sana düşüyor. En iyi ödülü almak için olabildiğince çok Batık Sandığı'yla etkileşime geç.",
+    "content.26.-1054": "İş Birlikçi: Cwab Sepeti",
+    "content.26.-1058": "Rekabetçi: Cwab Sepeti",
+    "content.26.-1062": "Yarış: Cwab Sepeti",
+    "content.26.-1066": "Tek Kişilik: Cwab Sepeti",
+    "content.33.37191": "Durumun hedefi az önce bir Kese düşürdü; dövüş boyunca başka Kese düşürmeyecek.",
+    "content.33.386179": "[ar207] etkileri 1 tur gecikir:\\n<b>Kese:</b> [st8553] +1 Sv.\\n<b>Şişkin Kese:</b> [st8553] +2 Sv.\\nBirikerek en fazla 6. seviyeye ulaşır",
+    "content.4.5589": "Bu büyü bir Sandığı bir hücre itmek için kullanılır. Kazanmak için işaretli hücrelerin her birinde bir sandık bulunmalıdır.",
+    "content.4.5620": "Bu büyü, hata yapman durumunda son Sandık hareketini geri almanı sağlar! Uyarı: YALNIZCA son hareketi geri alabilirsin. Artık kazanamayacağını düşünüyorsan pes edip dövüşü baştan başlatmalısın.",
+    "content.4.5799": "Bu büyü, hata yapman durumunda son Sandık hareketini geri almanı sağlar! Uyarı: YALNIZCA son hareketi geri alabilirsin. Artık kazanamayacağını düşünüyorsan pes edip dövüşü baştan başlatmalısın.",
+    "content.4.6572": "Bu büyü, hata yapman durumunda son Sandık hareketini geri almanı sağlar! Uyarı: YALNIZCA son hareketi geri alabilirsin. Artık kazanamayacağını düşünüyorsan pes edip dövüşü baştan başlatmalısın.",
+    "content.4.6744": "Bu büyü, hata yapman durumunda son Sandık hareketini geri almanı sağlar! Uyarı: YALNIZCA son hareketi geri alabilirsin. Artık kazanamayacağını düşünüyorsan pes edip dövüşü baştan başlatmalısın.",
+    "content.64.4726": "\"Şüpheli Sandığı\" ara ve Şiddet İlahicisi'ni yen",
+    "content.64.6059": "* 1x Sandık (Tamirci)",
+    "content.64.6744": "Silo Sandığı'nı incele",
+    "content.64.889": "Hasır Sepeti Moze'ye götür",
+    "content.67.981": "\\n[#icon 126:center]\\n<b>Malzeme talebini</b>, malzemelerin görünmesini sağlamak için sıradan bir tohum veya çelik gibi özel bir hücreye ekmelisin.\\n\\nMalzemeler ortaya çıktığında onlarla etkileşime geçebilirsin. İçindekileri almak için <b>Malzeme Sandığı'nın</b> kilidini açman gerekecek. Sandığı yerleştirmek, çağırmak, kilidini açmak ve ardından almak için birkaç eylem gerçekleştirilmelidir.",
+    "content.76.8985": "İşte özenle hazırlanmış Sandığın!",
+    "content.85.261": "Taroudium Sandığı",
+    "kelba.quest.convoipiaf.01": "KAAAWWW! KAW KUTU KAW! EFENDİ İÇİN! KAWKAAAW!!"
+  }
+}

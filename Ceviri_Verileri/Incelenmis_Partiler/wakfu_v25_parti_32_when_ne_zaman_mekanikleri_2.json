@@ -1,0 +1,30 @@
+{
+  "source_keys": {
+    "content.33.293608": "Baby Gerbean yakın dövüş menzilinde bir düşman bulunduğunda, yayılan veya artçı şoklu elektrik saldırılarına karşı <b>korunur</b>.",
+    "content.33.293609": "Gerbean bir elektrik saldırısından korunduğunda bu koruma Gerbean'e 1 WP'ye mal olur.\\\\n\\\\nGerbean'in WP'si yoksa bu <b>koruma</b> uygulanmaz.",
+    "content.33.304819": "Bir oyuncu düz bir hatta ve 1-5 Menzilden doğrudan hasar verdiğinde:\\\\n[pl]Saldırgan ile hedefi yer değiştirir",
+    "content.33.304886": "[ar1510] Hasar aldığında:\\\\n[pl][El0] Hasarı: 5.000 [ecnbi] [ecnbr] [CIRCLE] (3)",
+    "content.33.305198": "Feca en az 1 WP'ye sahip olduğunda:\\\\n[pl]%100 Zırh üretir\\\\n[pl][caster] bir hedefe Zırh verdiğinde 1 WP kaybeder",
+    "content.33.309025": "<b>Boss</b> Enraged olduğunda tüm <b>Tortumulusları</b> düşmanlardan 2 hücre uzağa yeniden konumlandırır.",
+    "content.33.312878": "<b>Geçerli saat</b> tek olduğunda:\\\\n[pl]-%25 Verilen Hasar\\\\n[pl]<b>%25 Can Çalma</b>",
+    "content.33.342132": "Stasification Unit öldüğünde:\\\\n[pl][$2ef] (saldırgan)\\\\n\\\\nDoğrudan hasar aldığı her seferde:\\\\n[pl][$3ef]",
+    "content.33.342134": "Elite Gunner öldüğünde:\\\\n[pl][$2ef]\\\\n\\\\nHer sekme için:\\\\n[pl][$3ef]",
+    "content.33.343178": "Kullanıcının 2 seviye High Pressure'ı varken bir büyü kullanıldığında, büyüye bağlı ek bir etki tetiklenir ve High Pressure tüketilir",
+    "content.33.349340": "[caster], [ar1049] çağırdığında:\\\\n[pl]5 hücre içindeki aynı hizada hedefleri 2 hücre çeker\\\\n\\\\n[caster], [ar1049] geri aldığında:\\\\n[pl]5 hücre içindeki aynı hizada hedefleri 2 hücre iter",
+    "content.33.350529": "[caster] bir azaltma (AP, MP veya Menzil) gerçekleştirdiğinde:\\\\n[pl][$1$1ef]\\\\n\\\\n[el6] büyülerinin verdiği hasar -%10",
+    "content.33.350823": "[st3420] 40. seviye veya üzerindeyken:\\\\n[pl]1 MP\\\\n[pl]2 Menzil\\\\n\\\\nCra, çevresinde bir müttefik olduğunda artık Evasive tetiklemez",
+    "content.33.350828": "[st7757] etkisi altındayken:\\\\n[pl]Precision tüketen büyüler %25 Can Çalar\\\\n\\\\n[sp7752] artık tur başına 1 kullanımla sınırlıdır",
+    "content.33.356059": "Huppermage; element [el1][el2][el3][el4] ve Işık [el6] büyülerini bir hedef veya [ar1049] üzerinde dönüşümlü kullandığında:\\\\n[pl]AP başına [se]",
+    "content.33.356060": "Huppermage, bitişik bir hedef veya [ar1049] üzerinde büyü kullandığında:\\\\n[pl]AP başına [se]",
+    "content.33.356061": "Huppermage harekete neden olduğunda:\\\\n[pl]AP başına [se]",
+    "content.33.357964": "Ecaflip kritik vuruş yaptığında:\\\\n[pl][caster] [$1ef]",
+    "content.33.357971": "Ecaflip'in oyunda bir [st3730] durumu olduğunda:\\\\n[pl]|[#7.2]*100| oranında [el3] Hasarı Can Çalar",
+    "content.33.367942": "Bir [bomb] Bomba patladığında:\\\\n[pl][caster] 1 AP (1 tur)\\\\n\\\\nTüm [bomb] Bombalar 1 HP'ye sahiptir",
+    "content.33.376991": "[caster][ally] bir Portal kullandığında (tur başına 1 kez):\\\\n[pl]2 MP (1 tur)\\\\n[pl]Hedef portal yok edilir\\\\n[pl][caster] 1 azami WP geri kazanır",
+    "content.33.377030": "[caster][ally] bir Portal kullandığında (tur başına 1 kez):\\\\n[pl]2 MP (1 tur)\\\\n[pl]Hedef portal yok edilir\\\\n[pl][caster] 1 azami WP geri kazanır",
+    "content.33.377541": "Bir [ally] müttefik Voodoll'a hasar verdiğinde:\\\\n[pl]Yönlendirilen hasar [#1]% artar",
+    "content.33.377716": "[caster] Sadida bir düşmandan hasar aldığında:\\\\n[pl][$1ef]",
+    "content.33.383747": "<b>Necromic Crystal</b> yok edildiğinde:\\\\n[pl]Saldırgana [$1ef]"
+  },
+  "statuses": []
+}

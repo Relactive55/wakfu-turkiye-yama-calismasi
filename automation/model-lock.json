@@ -1,0 +1,10 @@
+{
+  "package_name": "translate-en_tr",
+  "from_language": "en",
+  "to_language": "tr",
+  "version": "1.5",
+  "url": "https://argos-net.com/v1/translate-en_tr-1_5.argosmodel",
+  "sha256": "2d553a00880a0c21dea5b1c375535659e6bf18c9bf2ce9847c2a2fd2ff50316a",
+  "size_bytes": 124742526,
+  "policy": "Fail closed: this file is never changed by a workflow."
+}

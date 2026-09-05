@@ -1,0 +1,31 @@
+{
+  "source_keys": {
+    "content.8.1952": "Alev Geri Tepmesi",
+    "content.8.7885": "Alev Geri Tepmesi - Sayaç",
+    "content.8.7903": "Alev Geri Tepmesi - Hasar Bonusu",
+    "content.13.353693": "[se] (Alev Geri Tepmesi tüketildi)",
+    "content.4.5049": "Sacrier, kendisine her Alev Geri Tepmesi uyguladığında Kilitleme ve Kaçınma değerlerini artırır. Ancak Alev Geri Tepmeleri daha güçlü olur.",
+    "content.4.5193": "Sacrier doğal WP yenilenmesini kaybeder. Bunun yerine kendisine Alev Geri Tepmesi uygulayarak WP kazanır.",
+    "content.4.5194": "Sacrier, hareket büyülerinin WP bedelini AP bedeliyle değiştirir. Bir düşmanı büyüyle hareket ettirirse düşman doğrudan hasar alır. Sacrier kendisini hareket ettirirse Alev Geri Tepmesi hasarı alır.",
+    "content.4.5195": "Bu pasif, Sacrier'in Can Puanını daha iyi yönetmesini sağlar. Sacrier bir hedefe hasar verdiğinde hedefin Can Puanı yüzdesi kendisininkinden yüksekse verdiği hasarın bir bölümüyle Can çalar. Sacrier'in Can Puanı yüzdesi hedefinkinden yüksekse kendisine Alev Geri Tepmesi uygular.",
+    "content.4.7216": "Sacrier, Alev Geri Tepmelerini Zırha dönüştürür. Ancak turunun başında Zırhı kalmışsa Zırh miktarı kadar hasar alır.",
+    "content.4.7217": "Sacrier her WP kullandığında Can Puanı kazanır fakat Alev Geri Tepmesi hasarı alır.",
+    "content.4.7224": "Sacrier turunu bir düşmanın yanında bitirirse Alevlenir. Turunun başında yanında hiç düşman yoksa Alevlenme değerine eşit Alev Geri Tepmesi hasarı alır.",
+    "content.33.197815": "10. seviyeden itibaren bir Ceza etkinken Sacrier Alev Geri Tepmelerini tüketir:\\n[pl][st4798]: Seviye başına %4 verilen hasar (1 tur)\\n[pl][st4799]: İyileştirme: Seviye başına eksik Can Puanının %4'ü",
+    "content.33.353202": "4. Alev Geri Tepmesinde:\\n[pl]2 WP",
+    "content.33.353203": "Her 4 Alev Geri Tepmesinde:\\n[pl]2 WP\\n\\nDoğal WP yenilenmesi devre dışı bırakılır",
+    "content.33.353367": "<b>Alev Geri Tepmeleri</b> Zırha dönüşür",
+    "content.33.353416": "Sacrier kendisine [st4840] uyguladığında:\\n[pl]Seviyesinin %100'ü kadar Kilitleme (1 tur, birikir)\\n[pl]Seviyesinin %100'ü kadar Kaçınma (1 tur, birikir)\\n\\nAlev Geri Tepmeleri %20 artar",
+    "content.3.2334": "Kaçak",
+    "content.8.7917": "Sinsi",
+    "content.4.6470": "Bu büyü, Kaçak modunda Rogue'un hedeflerinden MP eksiltir; Sinsi modunda ise Hançer Dönüşü seviyesi kazandırır. Büyü bir bombaya uygulanırsa etkiler düz bir çizgi boyunca yayılır.",
+    "content.4.6486": "Rogue, Sinsi modunda Zırh kazanmak için Barutunu tüketir.",
+    "content.4.6492": "Kaçak modunda Rogue, pençesini kullanarak bir dövüşçüye yaklaşır. Sinsi modunda hedefi kendine çeker, ardından arkasına geçer.",
+    "content.8.8041": "Hançer Dönüşü",
+    "content.13.371205": "[se] (Hançer Dönüşü)",
+    "content.8.8040": "Sinsi Bıçak",
+    "content.13.371075": "[se] (Sinsi Bıçak)",
+    "content.8.5840": "Sinsi Kalkan",
+    "content.13.282141": "Bir Sinsi Kalkan seviyesi kaybeder"
+  }
+}

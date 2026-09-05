@@ -1,0 +1,29 @@
+{
+  "source_keys": {
+    "content.156.64": "Dövüş alanı bir <text color=\"importantTextColor\">dövüş sınırıyla</text> çevrilidir.\\n\\nFarklı dövüş sınırı türleri bulunur. Bir sınırın üzerinde yürümek veya turunu üzerinde başlatmak bazı etkileri tetikler.",
+    "content.33.105251": "Bir oyuncu turuna başlarsa veya alana girerse:\\n[st2336]",
+    "content.33.106909": "[ally] müttefik hasar aldığında:\\n[pl][st2358] kaldırır\\nAksi hâlde turun başında:\\n[pl][$1ef]\\n[pl][$2ef]\\n[pl][$3ef]",
+    "content.33.107812": "Can Puanı %50'nin altındaysa turun başında:\\n[pl][$1ef]",
+    "content.33.109016": "Can Puanı %33'ün altındaysa turun başında:\\n[pl][$1ef]",
+    "content.33.109578": "Can Puanı %66'nın altındaysa turun başında:\\n[pl][$1ef]",
+    "content.33.109581": "Can Puanı %75'in altındaysa turun başında:\\n[pl][$1ef]",
+    "content.33.109584": "Can Puanı %25'in altındaysa turun başında:\\n[pl][$1ef]",
+    "content.33.114593": "Trainer turunu bir rakiple yakın dövüşte bitirirse:\\n[pl]Shadowy Clow kullanır; bu büyü görünmez olup kaçmasını sağlar",
+    "content.33.115921": "Bu karakter tetikte. Dikkatini çekmeyin!\\nKarakteri Sersemletmek Alert seviyesini geçici olarak düşürür.\\nDurum 100. seviyeye ulaştığında karakter sizi fark eder; uzaklaşsanız bile durumun seviyesi düşmez.\\nKarakter turuna 100. seviye durumla başlarsa tüm oyuncuları öldürür.",
+    "content.33.118131": "Bir düşman turunu aynı hizada, görüş hattı açık ve 7 Menzilden yakında bitirirse:\\n[pl]Düşman 2 hücre geri itilir",
+    "content.33.118631": "Turun başında müttefiklere Direnç Bonusu, düşmanlara Direnç Cezası uygular\\n[pl][CIRCLE] (boyut 2)",
+    "content.33.119416": "Turunun sonunda:\\n[pl]Flaxhid en yakın hedefe saldırır",
+    "content.33.144236": "Bir oyuncu turunu\\nLapse'in yanında her başlattığında veya bitirdiğinde,\\nçevresindeki hedefleri geri iter",
+    "content.33.144653": "Turun sonunda bir karakter, bir canavarın Zaman Paktı etki alanındaysa:\\n[pl][$2$1ef]",
+    "content.33.146122": "Pandawa Fıçısının normal Can Puanı gibi işleyen Litreleri vardır.\\nBazı büyüler Fıçı taşınırken veya Fıçıya kullanıldığında ek etkiler oluşturur.\\nPandawa turun sonunda kendi Fıçısını taşıyorsa Fıçıdan içer, Litrelerinin %5'ini tüketir ve ardından [st3300] ile [st3301] durumlarına girer.",
+    "content.33.152678": "Ush, turunun başında Kara Bow Meowlar ve Bubi Tuzaklı Haritalar çağırır",
+    "content.33.153757": "Turunun sonunda:\\n[pl][st3548]",
+    "content.33.164386": "Turunu bir [enemy] düşmanın veya [ally] müttefikin yanında bitirdiğinde:\\n[pl][caster] [$1$1ef]",
+    "content.33.164655": "Turun sonunda rezerv 1. seviyedeyse:\\n[pl]Taşıyıcı nakavt olur",
+    "content.33.164904": "[pl]Xelor turun başında Hour Cell üzerindeyse +[$1#2] Seviye",
+    "content.33.174744": "Turunu sizinle temas hâlinde bitiren [fighter] savaşçıya:\\n[pl][fighter] [$1ef]",
+    "content.33.181992": "[se] (1 tur)\\nTuruna üzerinde başlayan oyuncuyu öldürür",
+    "content.33.182455": "[pl]Mechamummy saldırıya uğradığında WP kazanır\\n[pl]Mechamummy turun başında WP kazanır\\n[pl]Mechamummy'ye saldıran kişi [st4398] etkisine maruz kalır\\n[pl][#1] Gücü ve Menzili Mechamummy'nin WP'sine bağlıdır\\n[pl]Mechamummy Sabitlenmiştir ve taşınamaz"
+  },
+  "statuses": []
+}

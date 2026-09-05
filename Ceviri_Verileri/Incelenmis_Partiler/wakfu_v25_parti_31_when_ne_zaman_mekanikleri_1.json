@@ -1,0 +1,30 @@
+{
+  "source_keys": {
+    "content.33.104373": "Dövüşte bir karakter veya canavar öldüğünde Shaman Gobbette'in özellikleri artar.",
+    "content.33.119122": "Kama yığını tükendiğinde:\\\\n[pl][$1ef][enemy]\\\\n[pl][$2ef][ally]",
+    "content.33.120168": "Fıçı bitkiyle yakın dövüşe yerleştirildiğinde:\\\\n[pl][$1ef]",
+    "content.33.159370": "Feca Blok yaptığında:\\\\n[pl][$1ef], saldırgan yakın dövüşteyse\\\\n[pl][$2ef], saldırgan menzildeyse",
+    "content.33.160868": "Bir [enemy] düşman alandan çıktığında:\\\\n[pl]Hedefin üzerine atlar\\\\n[pl][$2ef] uygular\\\\n[pl]-[$3$1#1] Kaçınma kaldırır",
+    "content.33.162932": "[st3333] olduğunda:\\\\n[pl]WP yenilemesini 2 artırır",
+    "content.33.163762": "[st3778] tüketildiğinde:\\\\n[pl]Hedefe [el2] Hasarı: [#1]",
+    "content.33.164544": "[ar973], [enemy] düşmanda tetiklendiğinde:\\\\n[pl][caster] [$1ef]",
+    "content.33.167972": "[st3930] tetiklendiğinde:\\\\n[pl][enemy] [st752] ",
+    "content.33.168526": "Bir [st3877] yok edildiğinde:\\\\n[pl]Sahibi olan Foggernaut'a +1 WP",
+    "content.33.168543": "Foggernaut [st3914] modundayken:\\\\n[pl][$1ef]\\\\n[pl] [$2ef]",
+    "content.33.168735": "Pandawa kendi [barrel] Fıçısını taşırken:\\\\n[pl]Alınan hasarın %20'si [barrel] Fıçıya yönlendirilir",
+    "content.33.171119": "Bir Totem kendi elementinde Hasar aldığında saldırganla yer değiştirir",
+    "content.33.171463": "Bir [ally] müttefik 4 hücre içinde öldüğünde:\\\\n[pl][$1$1ef]",
+    "content.33.172815": "Bir [enemy] düşman 4 hücre içinde iyileştirildiğinde:\\\\n[pl]Taşıyıcı, iyileştirmenin yarısı kadar Zırh kazanır",
+    "content.33.176228": "Taşıyıcı Hasar aldığında,\\\\nsaldırganla aynı hizada değilse:\\\\n[pl][enemy] [$1ef]",
+    "content.33.177042": "Bir Tofu Hasar verdiğinde,\\\\ntüm müttefikler şunu kazanır:\\\\n[pl][$1$1ef]",
+    "content.33.177637": "Bir büyü kullanıldığında, harcanan her AP için:\\\\n[pl][$1ef]",
+    "content.33.184947": "Bir büyü kullanıldığında, harcanan her AP için:\\\\n[pl][$1ef]",
+    "content.33.241205": "[st5171] sona erdiğinde:\\\\n[pl]Tüm WP'yi yeniler\\\\n[pl]Fury 0'a döner",
+    "content.33.266002": "Young Wild Sow turuna bir oyuncuyla yakın dövüşte başladığında:",
+    "content.33.266032": "Aggressive Blibli turuna bir oyuncuyla yakın dövüşte başladığında:\\\\nTüm müttefiklerine [$1$1ef].",
+    "content.33.269660": "Bir [fighter] savaşçı bir [ar1370] yok ettiğinde:\\\\n[pl]Alan sahibine [$1ef]",
+    "content.33.283343": "[ar1417] Hasar aldığında:\\\\n[pl]Saldırgana 1 seviye [st5963]",
+    "content.33.283653": "[ar1417] nakavt olduğunda:\\\\n[pl]Saldırgana 1 seviye [st5963]"
+  },
+  "statuses": []
+}

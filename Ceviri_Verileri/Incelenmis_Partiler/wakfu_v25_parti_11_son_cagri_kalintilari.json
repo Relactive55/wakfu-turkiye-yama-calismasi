@@ -1,0 +1,10 @@
+{
+  "source_keys": {
+    "INITDescription": "İnisiyatifinizi ve takımınızın İnisiyatifini artırır.\\n\\nİlk oynayan savaşçı, en yüksek İnisiyatife sahip takımdan olur. Ardından savaşçılar, İnisiyatif sırasına göre (en yüksekten en düşüğe) bir takımdan ve sonra diğerinden olacak şekilde oyuna katılır.\\n\\nÇağrılar, onları çağıran savaşçıdan hemen sonra oynar.",
+    "content.33.327755": "[caster] [se]\\n\\nÇağrı büyüsünün Menzili artık değiştirilemez",
+    "content.142.10": "Turunu bitiren bir oyuncu olmalıdır\\nÇağrılar müttefik sayılır",
+    "content.142.29": "Turunu bitiren hedef bir oyuncu olmalıdır\\nÇağrılar düşman sayılır",
+    "content.142.32": "İyileştirici bir oyuncu olmalıdır\\nÇağrılar müttefik sayılır\\nKendini hedef alan iyileştirmeler sayılmaz"
+  },
+  "statuses": []
+}

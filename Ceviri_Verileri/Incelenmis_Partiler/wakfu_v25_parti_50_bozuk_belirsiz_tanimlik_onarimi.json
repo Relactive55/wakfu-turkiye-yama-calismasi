@@ -1,0 +1,19 @@
+{
+  "source_keys": {
+    "gelutin.dial.noKey": "İçeri girmene başka bir şey engel oluyor gibi. Belki özel bir eşyaya ihtiyacın vardır.",
+    "content.4.6280": "Ouginak bir Were-Ouginak'a dönüştüğünde Öfkesine bağlı olarak Direnç kazanır. Karşılığında tur başında Öfke kaybeder.",
+    "content.9.949": "Al Howin'in ruhu seni bir Bow Meow'a dönüştürdü. En azından bir dahaki sefere yabancılardan ikram kabul etmeden önce iki kez düşünürsün! Bir dövüşe girersen etkisi sona erer.",
+    "content.16.22044": "Bu enfes Hot-Dauge, seni 15 dakikalığına bir Dauge'a dönüştürür.",
+    "content.47.16872": "Onlara Multiman olmak için yaratıldığımı göstereceğim!",
+    "content.4.8140": "Bu büyü Voodoll'un, Sadida'nın diğer bebekleriyle yer değiştirmesini veya bir Ağacın çevresindeki savaşçılara Zırh vermesini sağlar.",
+    "content.24.-2098": "Bu Snapper kokusu aç Albatrocious'ları kendine çekiyor. Zavallı maceracılara saldırmaya başlayabilirler; bu yüzden onlarla en kısa sürede ilgilensen iyi olur. Ödülü toplamak için belirtilen sayıda yaratığı yok et.",
+    "content.24.-2097": "Bu Snapper kokusu aç Albatrocious'ları kendine çekiyor. Zavallı maceracılara saldırmaya başlayabilirler; bu yüzden onlarla en kısa sürede ilgilensen iyi olur. Ödülü toplamak için belirtilen sayıda yaratığı yok et.",
+    "content.33.105455": "Bworkball'u bir takım arkadaşına verir\\nKullanılabilmesi için Bworkball'un yanında olunmalıdır",
+    "content.33.144716": "Uzaktan alınan her saldırı için -1 AP",
+    "content.33.283418": "Tur başlangıcında:\\n[pl][st5963] 10. seviye olan en yakın düşmanın çevresindeki bir hücreye ışınlanır",
+    "content.33.344147": "Aynı hizada alınan her saldırı için:\\n[pl][se] (savaşçı başına 1 kez)",
+    "content.67.989": "Topladığın Çiçeği yerleştirip takımına puan kazandırmak için kendi saksınla etkileşime girmen yeterlidir.\\n\\nSavaş Alanındaki amacın mümkün olduğunca çok puan kazanmaktır. Son sayımdan sonra rakibinden fazla puanın varsa Savaş Alanını kazanırsın. Takımın şu yollarla puan kazanır:\\n\\n- Wodent'ları veya düşman oyuncuları yenerek\\n- Bir Çiçek Taşıyıcısını yenerek\\n- Saksında bir veya daha fazla Çiçek bulundurarak (takımının puanı zamanla kendiliğinden artar)\\n- Dağda saklanan Darth Wodent'ı yenerek",
+    "content.75.4387": "Ah evet, Kutsal Koko'yu geri getirmekten sen sorumlusun{[1*]?:}, değil mi? Zavallıcık{[1*]?:}, bu hiç kolay bir görev değil. Yine de Kokoko'ların, özellikle Sufokia açıklarındaki bir adada oldukça huzursuz göründüğü doğru. Şu anda orada bir tane olabilir!"
+  },
+  "statuses": []
+}

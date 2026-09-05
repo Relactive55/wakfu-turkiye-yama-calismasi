@@ -1,0 +1,12 @@
+{
+  "name": "WAKFU v25 Parti 116 - Kalan vali metinleri",
+  "source_keys": {
+    "content.76.2271": "Peki Vali böyle şeyler döndüğünü biliyor mu?",
+    "content.76.881": "Peki Vali böyle şeyler döndüğünü biliyor mu?",
+    "nation.error.governmentCandidateForbiddenByRevokeChatMessage": "Seçime aday olamazsın. Vali görevinden alınmanın üzerinden henüz iki seçim geçmedi.",
+    "nation.error.governmentNominationForbiddenByRevokeChatMessage": "Bu kişiyi unvana aday gösteremezsin. Vali görevinden alınmasının üzerinden henüz iki seçim geçmedi.",
+    "nation.governorSpeech": "Valinin Konuşması",
+    "notification.governorEndElectionText": "##Vali## seçildin.",
+    "tutorial.questEco.description": "Her bölgede belirli koşullara göre geçici görevler belirir. Ulusunun Valisi, bölgenin Klan Üyesiyle görüşerek yeni görevlere yatırım yapabilir."
+  }
+}

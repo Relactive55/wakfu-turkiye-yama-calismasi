@@ -1,0 +1,32 @@
+{
+  "source_keys": {
+    "content.33.282581": "Turun başında arkadaki tüm düşmanlara [st5937] durumunu uygular.",
+    "content.33.282786": "1 dövüş boyunca, turun başında:\\n[pl][$1ef] ([#1] tur)",
+    "content.33.282873": "\\nTurun başında hiç sunak yok edilmediyse:\\n[pl][$1ef]\\n[pl]Giderek daha fazla Zırh kazanır",
+    "content.33.282901": "Turun başında:\\n[pl][$1ef] (her 3 turda bir)\\n[pl]Pandora yalnızsa öfkelenir\\n[pl]Önceki turda hiç sunak yok edilmediyse Ancestral Lightning büyüsünü kullanır",
+    "content.33.283100": "Turunu üzerinde bitirdiğinde: [se]",
+    "content.33.283251": "Turun sonunda durum taşıyıcısının 2 veya daha fazla AP'si varsa:\\n<b>[$1ef]</b> (1 tur)",
+    "content.33.283381": "Turun sonunda durum taşıyıcısı, kullanılmamış 1 AP'yi en yakın müttefike aktarır",
+    "content.33.283460": "Turun sonunda durum taşıyıcısının 6 veya daha fazla AP'si varsa:\\n<b>[$1ef]</b> (2 tur)",
+    "content.33.283543": "Turun sonunda Kritik Vuruş yapıldıysa:\\n[pl]<b>[$1$1$1ef]</b>",
+    "content.33.290906": "Karakterler turunu bir [ally] müttefikle aynı hizada bitirmemelidir (çağrılar dâhil)",
+    "content.33.295578": "Turuna Aguabrial'ın yanında başlayan veya turunu yanında bitiren varlıklar [st6251] kazanır ([#1]. seviyede)",
+    "content.33.309489": "Her harekette kullanılan MP başına:\\n[pl]+%3 Blok (en fazla 18) (1 tur)\\nDurum taşıyıcısı kendi turu dışında bir Blok gerçekleştirirse:\\n[pl]Bonus sonraki tur Kritik Vuruşa dönüştürülür",
+    "content.33.312650": "Xelor'un turda kullandığı her farklı element için\\nşu uygulanır:\\n[se]\\n(Element başına turda en fazla 1)",
+    "content.33.313198": "[se]\\n\\nXelor turuna Current Hour üzerinde başlarsa Punctuality durumunu kazanır; bu durum üzerindeki Hasar artışını kilitler",
+    "content.33.317618": "Turun başında durum taşıyıcısının Can Puanı %90 veya üzerindeyse:\\n[pl]2 MP (1 tur)",
+    "content.33.318077": "Durum taşıyıcısının turunun başında:\\n[pl]En yakın hedefe (oyuncu takımı) [$2$1ef]",
+    "content.33.322451": "Turun sonunda dövüşe [#1] Rock çağırır\\n[pl]Rock yok edildiğinde saldırgandan 3 MP kaldırır",
+    "content.33.323793": "Her Kritik Vuruş yapıldığında (tur başına 5 kez):\\n[pl][$1$1ef]",
+    "content.33.328748": "Bir düşmanı öldürdüğünde <b>[$1$1$1#1]</b> AP yeniler (tur başına 2 kez)",
+    "content.33.329789": "Bir savaşçı Lardevil ile aynı hizadaysa (tur başına 1 kez):\\n[pl]Savaşçıya doğru atlar\\n[pl]Yol üzerindeki tüm savaşçılara hasar verir\\n\\nLardevil saldırıya uğrarsa:\\n[pl]Saldırgana döner (tur başına 1 kez)\\n[pl]Bitişiğindeki tüm savaşçılara hasar verir (tur başına 1 kez)\\n[pl]1 MP (1 tur)\\n\\nMüttefiklerinden biri öldüğünde:\\n[pl]Saldırganın üzerine atlar ve ona hasar verir\\n\\nLardevil Sabitlenmiştir",
+    "content.33.331627": "Kokonuts turun başında savaş alanına çağrılır\\n\\nBir Kokonut patladığında Kokobust kaldırılır",
+    "content.33.332053": "Bir oyuncu turuna başlarsa veya alana girerse:\\n[st7300]",
+    "content.33.332312": "Etkin olduğu sürece Excarnus turunun sonunda bu totemin yakınına 2 kemik yığını çağırır",
+    "content.33.335084": "Hareket ettirilen bir canavar turunun sonunda Sabitlenir",
+    "content.33.340145": "Ouginak'ın turunun sonunda:\\n[pl][st7529] ile yer değiştirir\\n\\n[st7529] turunun sonunda:\\n[pl]Ouginak ile yer değiştirir",
+    "content.33.343993": "Turun sonunda Raeliss [st7690] yerleştirir\\n\\nGörüş hattı olmadan verilen hasara karşı bağışıktır",
+    "content.33.344474": "Foggernaut turun başında tüm WP'sine sahipse:\\n[pl]1 MP (1 tur)\\n[pl]Verilen Zırh +%30 (1 tur)\\n[pl]Tüm büyülerin asgari ve azami Menziline +2 (1 tur)"
+  },
+  "statuses": []
+}

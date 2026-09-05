@@ -1,0 +1,24 @@
+{
+  "keys": {
+    "min": "Minimum",
+    "max": "Maksimum",
+    "audio.device.default": "Varsayılan ses aygıtı {[~1]?([#1]):}",
+    "options.audio.device.used": "Kullanımdaki ses aygıtı: ",
+    "options.audio.reconnectAudioDeviceOnDeviceDisconnect": "Bağlantı kesilirse ses aygıtını otomatik değiştir",
+    "options.audio.desc.reconnectAudioDeviceOnDeviceDisconnect": "Bu seçenek etkinleştirildiğinde, ses aygıtınızın bağlantısı kesilirse oyun otomatik olarak varsayılan ses aygıtına geçer.",
+    "options.audio.desc.reconnectAudioDeviceOnDeviceDisconnect.unavailable": "Donanımınızda kullanılamaz",
+    "options.musicMute": "Müziği sessize al",
+    "options.musicContinuous": "Kesintisiz çalma",
+    "options.desc.musicContinuous": "Kesintisiz çalma açıkken arka plan müziği sürekli çalar.\\nBu seçenek kapalıysa aynı bölgede birkaç dakika kaldığınızda müzik durur.",
+    "options.musicVolume": "Müzik ses düzeyi",
+    "options.desc.musicVolume": "Oyun müziğinin ses düzeyini ayarlar",
+    "options.soundsVolume": "Ses düzeyi",
+    "options.desc.ambiantSoundVolume": "Oyundaki ses efektlerinin düzeyini ayarlar",
+    "options.ambianceSounds": "Arka plan sesleri",
+    "options.ambianceSoundsMute": "Arka plan seslerini sessize al",
+    "options.uiSounds": "Arayüz sesleri",
+    "options.uiSoundsMute": "Arayüz seslerini sessize al",
+    "options.guiSoundsMute": "Arayüz seslerini sessize al",
+    "options.desc.interfaceSoundVolume": "Oyunun arayüz seslerinin düzeyini ayarlar"
+  }
+}

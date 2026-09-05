@@ -1,0 +1,50 @@
+name: Publish approved WAKFU Turkish patch
+
+on:
+  workflow_dispatch:
+    inputs:
+      game_version:
+        description: Exact approved WAKFU game version, e.g. 1.92.1.5172.314
+        required: true
+        type: string
+      patch_version:
+        description: Patch version in YYYY.MM.DD.N form
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: publish-wakfu-release-main
+  cancel-in-progress: false
+
+jobs:
+  package-and-release:
+    # A manual dispatch from a PR/topic branch must never publish.  The
+    # release Environment below still requires its configured reviewers.
+    if: github.ref == 'refs/heads/main'
+    # Configure the repository's "release" Environment with required
+    # reviewers. This is the explicit human approval boundary after PR merge.
+    environment: release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: main
+      - uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
+        with:
+          python-version: '3.11'
+      - name: Run release manifest tests
+        run: python -m unittest automation.tests.test_release_package -v
+      - name: Fetch approved source and build i18n package
+        run: |
+          echo 'Release creation is deliberately disabled until update_wakfu_localization.py has produced a reviewed state/snapshot.'
+          echo 'This guard prevents publishing an unreviewed or unverifiable PR output.'
+          exit 1
+
+# When the reviewed state/snapshot producer is enabled, the guarded step above
+# will: download its exact source JAR, run build_wakfu_jar.py and wakfu_audit.py,
+# run automation.release_package, then use:
+# gh release create "tr-${{ inputs.patch_version }}" release/i18n.jar release/manifest.json --title "WAKFU Türkçe Yama ${{ inputs.patch_version }}" --generate-notes
+# No raw/main-branch JAR is ever an installer input.

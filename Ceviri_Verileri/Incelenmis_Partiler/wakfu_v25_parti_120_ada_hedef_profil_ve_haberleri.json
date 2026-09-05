@@ -1,0 +1,30 @@
+{
+  "parti": "WAKFU v25 - Ada hedef, profil ve haberleri",
+  "source_keys": {
+    "content.64.5849": "Keşiş Adası'nda bir malzeme bul",
+    "content.64.5896": "Moon Adası'nda bu garip sayfa hakkında daha fazla bilgi verebilecek birini bul",
+    "content.64.6370": "Moon Adası'nda, ormandan çok uzakta olmayan bir hazine bul",
+    "content.64.6371": "Moon Adası'nda, adanın güney ucundan çok uzakta olmayan bir hazine bul",
+    "content.64.6376": "Wabbit Adası'nda, Zaap'tan çok uzakta olmayan bir hazine bul",
+    "content.64.6377": "Wabbit Adası'nda, Wa'nın Fowtwess'inden çok uzakta olmayan bir hazine bul",
+    "content.64.6391": "Moon Adası'nda, dağdan çok uzakta olmayan bir hazine bul",
+    "content.64.6392": "Moon Adası'nda, Crocodyl Zindanı'nın biraz doğusunda bir hazine bul",
+    "content.64.6393": "Moon Adası'nda, Crocodyl Zindanı'nın biraz batısında bir hazine bul",
+    "content.64.6397": "Wabbit Adası'nda, Gweat Klanların Dojosu'ndan çok uzakta olmayan bir hazine bul",
+    "content.64.6422": "Wabbit Adası'nda, Kara Wabbit Zindanı'ndan çok uzakta olmayan bir hazine bul",
+    "content.64.7306": "Moon Adası'na git.",
+    "content.64.7310": "Moon Adası'nın yüzeyindeki bütün paralı asker görevlerini tamamla",
+    "content.64.7311": "Moon Adası'nın derinliklerindeki bütün paralı asker görevlerini tamamla",
+    "content.67.1058": "22 = Dövüş 5\\n23 = Dövüş - Kwismas Adası\\n24 = Dövüş - Zindanlar\\n25 = Dövüş - Chillberg Adası\\n26 = Dövüş - Chillberg Adası Zindanları\\n27 = Patron - Kont Harebourg\\n28 = Patron - Ejderdomuz\\n29 = Dövüş - Zindanlar\\n30 = Dövüş 6\\n31 = Patron - Bilbiza\\n32 = Dövüş - Wabbit Adası\\n33 = Patron - Wabbit Adası\\n34 = Dövüş - Bwork\\n35 = Dövüş - Shustuft Crust\\n36 = Dövüş - Ohwymi\\n37 = Patron - Ohwymi\\n38 = Dövüş - Ingloriom\\n39 = Dövüş - Srambad\\n40 = Patron - Srambad\\n41 = Dövüş - Enurado\\n42 = Dövüş - Xelorium\\n43 = Patron - Xelorium\\n44 = Dövüş - Huppermage Okulu",
+    "content.83.31607": "Wabbit Adası İstasyonu",
+    "content.94.283": "<b>Doğum Yeri:</b> Moon Adası\\n<b>Hobisi:</b> Gelenekleri korumak\\n<b>Sevmedikleri:</b> Güç düşkünleri\\n<b>Uzmanlığı:</b> Zararlı otları tespit etmek",
+    "content.94.330": "<b>Doğum Yeri:</b> Moon Adası\\n<b>Hobisi:</b> Gelenekleri korumak\\n<b>Nefret Ettikleri:</b> Güç düşkünleri\\n<b>Uzmanlığı:</b> Zararlı otları tespit etmek",
+    "content.94.434": "<b>Doğum Yeri:</b> Wabbit Adası\\n<b>Hobisi:</b> Yemek yemek\\n<b>Nefret Ettikleri:</b> Lenaldlar\\n<b>Uzmanlığı:</b> Harekete geçmek",
+    "content.94.438": "<b>Doğum Yeri:</b> Wabbit Adası\\n<b>Hobisi:</b> Deney yapmak\\n<b>Nefret Ettikleri:</b> Suçluluk\\n<b>Uzmanlığı:</b> Biyoloji",
+    "news.newdungeon.blackwabbit.description": "Kara Wabbit Zindanı'nın (Wabbit Adası) kilidi açıldı",
+    "news.newdungeon.wabbit.description": "Wabbit Zindanı'nın (Wabbit Adası) kilidi açıldı",
+    "news.newdungeon.wesewve.description": "Terk Edilmiş Cawwot Stowewoom Zindanı'nın (Wabbit Adası) kilidi açıldı",
+    "news.newzone.zonewabbit2": "Yeni ada erişime açıldı - Wabbit Adası, \"Mowbid Wawwens\":\\n- Wabbit Tünelleri Zaap'ı kurtarıldı\\n- Mawbid Wawwens'taki Otomai'nin Müridi'nin kilidi açıldı",
+    "quest.sadida.10.14": "Brakmar şehrine veya Wabbit Adası'na saldırmak dünyayı kurtarmak sayılıyor mu?"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "source_keys": {
+    "content.33.152567": "Eğer [caster] [st3454]:\\n[pl][caster][$1$1ef]\\nEğer [caster] [st3453]:\\n[pl][$2$1ef]\\n[pl][$2$2ef] (1 tur)\\nEğer [caster] [st3455]:\\n[pl][caster][$3$1ef]",
+    "content.33.52631": "Yakın dövüş saldırısıyla vurulursa [st4889] uygular",
+    "content.33.82518": "Eğer [st1579]: 1 MP çalar",
+    "content.33.96216": "Tur başında, Can Puanı yüzdesi &lt;= %20 ise:\\n[pl][se]",
+    "content.33.146198": "Hasar alındığında:\\n[pl][$1$1ef]",
+    "content.33.169579": "[fighter] ve [caster] üzerinde: [$1ef]",
+    "content.33.380462": "Toross üzerinde:\\n[pl][$1ef]\\n\\nAksi hâlde:\\n[pl][$2$2$2#1] WP çalar",
+    "content.33.410291": "[$1ef]\\nÇağrılarda: [$2$1ef]",
+    "content.33.87183": "Etkinleştiğinde:\\n[pl][st1730] uygular (Sv. [#1])",
+    "content.33.105943": "<b>Bölge Etkinleşmesi:</b>\\n[pl]Bir hedef alana girer\\n<b>Etkiler:</b>\\n[pl]Shusnitch hedefin yanına ışınlanır\\n[pl][$3ef]\\n[pl][$2ef]",
+    "content.33.106758": "<b>Bölge Etkinleşmesi:</b>\\n[pl]Bir hedef turuna içeride başlar\\n[pl]Bir hedef alana girer\\n[pl]Kullanıldığı sırada alanda bir hedef bulunur\\n<b>Etkiler:</b>",
+    "content.33.107321": "<b>Bölge Etkinleşmesi:</b>\\n[pl]Bir hedef etki alanına girer\\n[pl]Kullanıldığı sırada etki alanında bir hedef bulunur\\n<b>Etkiler:</b>\\nTaşıyıcı etki alanında nakavt edilirse:\\n[pl]AP ve MP'sini kendisini öldüren kişiye aktarır",
+    "pvp.extraction.activate.mru.action.empty.inventory": "Etkinleştirme mümkün değil; pakt envanterin boş.",
+    "crime.name.PVP_WAKFU": "Bir karaktere saldır (Wakfu değeri [#1]% üzerinde)",
+    "crime.name.PVP_STASIS": "Bir karaktere saldır (Stasis değeri [#1]% üzerinde)"
+  }
+}
