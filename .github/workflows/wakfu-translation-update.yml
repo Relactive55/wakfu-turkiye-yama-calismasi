@@ -103,38 +103,44 @@ jobs:
           PY
       - name: Run simulated update without touching production state
         run: |
-          rm -rf automation/fixtures/pr_pipeline
           export XDG_CONFIG_HOME="$RUNNER_TEMP/argos-config"
           export XDG_DATA_HOME="$RUNNER_TEMP/argos-data"
           export XDG_CACHE_HOME="$RUNNER_TEMP/argos-cache"
           "$RUNNER_TEMP/argos-venv/bin/python" -m automation.simulated_pr_update \
-            --output-dir automation/fixtures/pr_pipeline \
+            --output-dir "$RUNNER_TEMP/pr_pipeline_output" \
             --model-path "$RUNNER_TEMP/translate-en_tr-1_5.argosmodel" \
             --model-lock automation/model-lock.json
       - name: Commit only the test fixture
         id: commit
         run: |
           if git ls-remote --exit-code --heads origin "$TEST_BRANCH" >/dev/null 2>&1; then
-            echo "TEST_BRANCH_ALREADY_EXISTS"
-            exit 1
+            git fetch origin "$TEST_BRANCH"
+            git switch --track --create "$TEST_BRANCH" "origin/$TEST_BRANCH"
+          else
+            git switch --create "$TEST_BRANCH"
           fi
-          git switch --create "$TEST_BRANCH"
+          rm -rf automation/fixtures/pr_pipeline
+          cp -R "$RUNNER_TEMP/pr_pipeline_output" automation/fixtures/pr_pipeline
           git add automation/fixtures/pr_pipeline
-          changed_files=$(git diff --cached --name-only)
+          if git diff --cached --quiet; then
+            echo "TEST_FIXTURE_ALREADY_ON_BRANCH"
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit -m "Test simulated WAKFU translation PR pipeline"
+            git push --set-upstream origin "$TEST_BRANCH"
+          fi
+          changed_files=$(git diff --name-only main...HEAD)
           forbidden_files=$(printf '%s\n' "$changed_files" | grep -Ev '^automation/fixtures/pr_pipeline/' || true)
           if [ -n "$forbidden_files" ]; then
             echo "TEST_PR_SCOPE_VIOLATION"
             printf '%s\n' "$forbidden_files"
             exit 1
           fi
-          if git diff --cached --quiet; then
+          if [ -z "$changed_files" ]; then
             echo "TEST_FIXTURE_PRODUCED_NO_CHANGES"
             exit 1
           fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "Test simulated WAKFU translation PR pipeline"
-          git push --set-upstream origin "$TEST_BRANCH"
           echo "commit_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
           printf '%s\n' "$changed_files" > "$RUNNER_TEMP/test-pr-changed-files.txt"
       - name: Create TEST ONLY pull request
