@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import shutil
 import tempfile
 import zipfile
 from pathlib import Path
@@ -19,10 +18,14 @@ from .release_validation import validate_release
 
 def _write_jar(path: Path, rows: list[str]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
+    # Store fixture entries without zlib compression.  This makes the test
+    # artifact byte-identical across the Windows developer runtime and the
+    # Ubuntu GitHub runner; the production builder likewise preserves the
+    # approved source JAR's bytes.
+    with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_STORED) as archive:
         for name in ("texts_en.properties", "texts_en_cleaned.properties"):
             info = zipfile.ZipInfo(name, date_time=(1980, 1, 1, 0, 0, 0))
-            info.compress_type = zipfile.ZIP_DEFLATED
+            info.compress_type = zipfile.ZIP_STORED
             info.external_attr = 0o644 << 16
             archive.writestr(info, "\n".join(rows) + "\n")
 
