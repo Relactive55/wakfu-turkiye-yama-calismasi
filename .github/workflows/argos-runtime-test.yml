@@ -52,7 +52,16 @@ jobs:
           if lock.get("url") != expected_url or lock.get("sha256", "").lower() != "2d553a00880a0c21dea5b1c375535659e6bf18c9bf2ce9847c2a2fd2ff50316a":
               raise SystemExit("model-lock.json is not the approved translate-en_tr 1.5 lock")
           target = pathlib.Path(sys.argv[1])
-          urllib.request.urlretrieve(expected_url, target)
+          request = urllib.request.Request(
+              expected_url,
+              headers={"User-Agent": "WakfuTurkceCeviri/argos-runtime-test"},
+          )
+          with urllib.request.urlopen(request, timeout=180) as response, target.open("wb") as output:
+              while True:
+                  chunk = response.read(1024 * 1024)
+                  if not chunk:
+                      break
+                  output.write(chunk)
           digest = hashlib.sha256(target.read_bytes()).hexdigest()
           if digest != lock["sha256"].lower() or target.stat().st_size != int(lock["size_bytes"]):
               raise SystemExit("Argos model size or SHA-256 mismatch")
