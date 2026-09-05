@@ -25,6 +25,10 @@ concurrency:
 
 jobs:
   inspect-upstream:
+    outputs:
+      game_version: ${{ steps.inspect.outputs.game_version }}
+      source_sha1: ${{ steps.inspect.outputs.source_sha1 }}
+      has_changes: ${{ steps.inspect.outputs.has_changes }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -34,18 +38,124 @@ jobs:
       - name: Validate automation modules
         run: python -m unittest discover -s automation/tests -p 'test_*.py' -v
       - name: Inspect Ankama localization without writing project state
+        id: inspect
         run: |
           python -m automation.update_wakfu_localization --dry-run | tee "$RUNNER_TEMP/wakfu-diff.json"
-          python - "$RUNNER_TEMP/wakfu-diff.json" <<'PY'
+          python - "$RUNNER_TEMP/wakfu-diff.json" "$GITHUB_OUTPUT" <<'PY'
           import json
           import sys
 
           report = json.loads(open(sys.argv[1], encoding="utf-8").read())
           changed = report.get("diff", {})
-          if not any(changed.get(kind) for kind in ("NEW", "MODIFIED", "REMOVED")):
+          has_changes = any(changed.get(kind) for kind in ("NEW", "MODIFIED", "REMOVED"))
+          with open(sys.argv[2], "a", encoding="utf-8") as output:
+              print(f"game_version={report['game_version']}", file=output)
+              print(f"source_sha1={report['source_sha1']}", file=output)
+              print(f"has_changes={'true' if has_changes else 'false'}", file=output)
+          if not has_changes:
               print("NO_CHANGES")
           else:
               print("DIFF_ONLY")
+
+  # Production PR inspection is intentionally separate from the disposable
+  # fixture writer.  It has no contents:write permission and therefore cannot
+  # create a branch or PR.  A future production candidate writer must consume
+  # this decision immediately before its write step as well.
+  inspect-open-production-prs:
+    if: (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.dry_run == false && inputs.test_fixture == false)) && needs.inspect-upstream.result == 'success'
+    needs: inspect-upstream
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
+        with:
+          python-version: '3.11'
+      - name: Read open PRs and apply duplicate/outdated decision
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GAME_VERSION: ${{ needs.inspect-upstream.outputs.game_version }}
+          SOURCE_SHA1: ${{ needs.inspect-upstream.outputs.source_sha1 }}
+          REPOSITORY: ${{ github.repository }}
+          HAS_CHANGES: ${{ needs.inspect-upstream.outputs.has_changes }}
+        run: |
+          set -euo pipefail
+          gh api "repos/${REPOSITORY}/pulls?state=open&base=main&per_page=100" > "$RUNNER_TEMP/open-prs.json"
+          if [ "$HAS_CHANGES" = "true" ]; then
+            python -m automation.pr_guard \
+              --prs-json "$RUNNER_TEMP/open-prs.json" \
+              --game-version "$GAME_VERSION" \
+              --source-sha1 "$SOURCE_SHA1" \
+              --repository "$REPOSITORY" | tee "$RUNNER_TEMP/pr-decision.json"
+          else
+            python -m automation.pr_guard \
+              --prs-json "$RUNNER_TEMP/open-prs.json" \
+              --game-version "$GAME_VERSION" \
+              --source-sha1 "$SOURCE_SHA1" \
+              --repository "$REPOSITORY" \
+              --no-changes | tee "$RUNNER_TEMP/pr-decision.json"
+          fi
+          echo "No branch, commit, PR, state, baseline, or Release is written by this inspection job."
+
+  mark-outdated-production-prs:
+    # A comment is the only write performed before a new candidate is built.
+    # We intentionally leave the old branch/PR open so human translations can
+    # still be inspected; merge and Release gates reject its stale metadata.
+    if: (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.dry_run == false && inputs.test_fixture == false)) && needs.inspect-open-production-prs.result == 'success'
+    needs: [inspect-open-production-prs, inspect-upstream]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
+        with:
+          python-version: '3.11'
+      - name: Mark stale production candidates without closing or merging them
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GAME_VERSION: ${{ needs.inspect-upstream.outputs.game_version }}
+          SOURCE_SHA1: ${{ needs.inspect-upstream.outputs.source_sha1 }}
+          REPOSITORY: ${{ github.repository }}
+          HAS_CHANGES: ${{ needs.inspect-upstream.outputs.has_changes }}
+        run: |
+          set -euo pipefail
+          gh api "repos/${REPOSITORY}/pulls?state=open&base=main&per_page=100" > "$RUNNER_TEMP/open-prs.json"
+          args=(--prs-json "$RUNNER_TEMP/open-prs.json" --game-version "$GAME_VERSION" --source-sha1 "$SOURCE_SHA1" --repository "$REPOSITORY")
+          if [ "$HAS_CHANGES" != "true" ]; then args+=(--no-changes); fi
+          python -m automation.pr_guard "${args[@]}" > "$RUNNER_TEMP/pr-decision.json"
+          python - "$RUNNER_TEMP/pr-decision.json" "$REPOSITORY" <<'PY'
+          import json
+          import subprocess
+          import sys
+
+          decision = json.loads(open(sys.argv[1], encoding="utf-8").read())
+          repository = sys.argv[2]
+          for item in decision.get("outdated_comments", []):
+              number = str(item["number"])
+              body = item["body"]
+              raw = subprocess.check_output(
+                  ["gh", "api", "--paginate", f"repos/{repository}/issues/{number}/comments"],
+                  text=True,
+              )
+              try:
+                  comments = json.loads(raw)
+              except json.JSONDecodeError:
+                  comments = []
+              if comments and isinstance(comments[0], list):
+                  comments = [entry for page in comments for entry in page]
+              if any(isinstance(comment, dict) and comment.get("body") == body for comment in comments):
+                  print(f"PR_{number}_ALREADY_MARKED")
+                  continue
+              subprocess.run(
+                  ["gh", "api", "--method", "POST", f"repos/{repository}/issues/{number}/comments", "-f", f"body={body}"],
+                  check=True,
+              )
+              print(f"PR_{number}_MARKED_OUTDATED")
+          print("No outdated production PRs require a comment." if not decision.get("outdated_comments") else "OUTDATED_PR_MARKING_COMPLETE")
           PY
 
   # This is an explicitly opt-in, fixture-only write path.  It never consumes

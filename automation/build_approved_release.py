@@ -17,6 +17,7 @@ import tempfile
 from pathlib import Path
 
 from .ankama_cdn import AnkamaCdnClient
+from .pr_guard import release_wakfu_gate
 from .release_package import build_release_assets
 from .release_validation import validate_release
 from .state import read_json
@@ -68,11 +69,18 @@ def build_approved_release(*, game_version: str, patch_version: str, output_dir:
 
         client = AnkamaCdnClient()
         current_version = client.latest_version()
-        if current_version != game_version:
-            raise RuntimeError(f"CDN version changed during release preparation: {current_version}")
+        current_entry, _ = client.target_entry(current_version)
+        gate = release_wakfu_gate(
+            approved_game_version=game_version,
+            approved_source_sha1=str(state["source_sha1"]),
+            current_game_version=current_version,
+            current_source_sha1=current_entry.sha1,
+        )
+        if gate["status"] != "PASS":
+            raise RuntimeError(gate["code"])
         entry = client.download_localization(game_version, source)
         if entry.sha1 != state["source_sha1"] or sha1(source) != entry.sha1:
-            raise RuntimeError("downloaded source JAR does not match approved baseline SHA-1")
+            raise RuntimeError("RELEASE_BLOCKED_WAKFU_VERSION_CHANGED")
         current_snapshot = snapshot(source, game_version, entry.sha1)
         baseline = read_json(baseline_path, default=None)
         if diff(baseline, current_snapshot)["NEW"] or diff(baseline, current_snapshot)["MODIFIED"] or diff(baseline, current_snapshot)["REMOVED"]:
@@ -100,6 +108,19 @@ def build_approved_release(*, game_version: str, patch_version: str, output_dir:
         issue_count = _audit_issue_count(audit_dir / "Wakfu_Ceviri_Ozet.txt")
         if issue_count:
             raise RuntimeError(f"wakfu_audit reported {issue_count} critical issue(s)")
+        # Re-read the lightweight CDN identity immediately before staging the
+        # Release assets.  A WAKFU rollout during the build must not result in
+        # an old source being tagged as current.
+        final_version = client.latest_version()
+        final_entry, _ = client.target_entry(final_version)
+        final_gate = release_wakfu_gate(
+            approved_game_version=game_version,
+            approved_source_sha1=str(state["source_sha1"]),
+            current_game_version=final_version,
+            current_source_sha1=final_entry.sha1,
+        )
+        if final_gate["status"] != "PASS":
+            raise RuntimeError(final_gate["code"])
         manifest = build_release_assets(patch_jar=patch, source_jar=source, game_version=game_version, patch_version=patch_version, output_dir=output_dir)
         validation = validate_release(source_jar=source, patch_jar=output_dir / "i18n.jar", manifest_path=output_dir / "manifest.json", game_version=game_version, patch_version=patch_version, release_tag=f"tr-{patch_version}")
         return {"status": "PASS", "mode": "stable", "game_version": game_version, "patch_version": patch_version, "audit_issues": issue_count, "manifest": manifest, "validation": validation["translation"]}

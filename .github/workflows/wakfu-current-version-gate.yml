@@ -1,0 +1,39 @@
+name: WAKFU current-version merge gate
+
+# This is intentionally pull_request (not pull_request_target).  It uses no
+# secrets and has read-only permissions, so untrusted PR code cannot write to
+# the repository or approve itself.
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: wakfu-current-version-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  current-wakfu:
+    name: Current WAKFU version/source gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          # Execute the gate implementation from trusted main, not from the
+          # untrusted PR head.  The event remains pull_request and carries no
+          # secrets, so this does not require pull_request_target.
+          ref: ${{ github.event.pull_request.base.sha }}
+      - uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
+        with:
+          python-version: '3.11'
+      - name: Check current Ankama WAKFU identity
+        env:
+          EVENT_PATH: ${{ github.event_path }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          python -m automation.wakfu_pr_gate --event "$EVENT_PATH" --repository "$REPOSITORY"
