@@ -1,50 +1,60 @@
-WAKFU TÜRKÇE ÇEVİRİ ARACI
+# WAKFU TÜRKÇE YAMA
 
-Güncel sürüm: 29.08-WakfuQuality-v43-Portable
-Ana klasör: bu temiz depo klasörü
+## Güncel Sürüm
 
-KULLANIM
-1. Wakfu_Turkce_Ceviri_Araci.exe dosyasını açın.
-2. Arama kutusunda anahtar, İngilizce metin veya Türkçe metin arayabilirsiniz.
-3. Bir satırı seçip sağ alttaki Türkçe alanından elle düzeltebilirsiniz.
-4. Değişiklikler kısa bir gecikmeyle güvenli biçimde kaydedilir. Hemen yazmak için Ctrl+S veya Kaydet düğmesini kullanın.
-5. Baş üstü yazı boyutunu Normal, Küçük (önerilen) veya Çok küçük olarak seçin. Oyuna Kur düğmesi güncel Türkçe i18n.jar, font ve istemci paketlerini bu seçimle WAKFU klasörüne kurar.
-6. Orijinali Yedekle temiz oyun dosyalarını saklar; Orijinali Geri Yükle bu temiz dosyalara döner.
-7. Oyun güncellenirse program i18n_en.jar, gui.jar ve istemci dosyasındaki değişikliği algılar, yeni temiz kaynakları projeye alır ve kullanıcıya güncelleme bulunduğunu bildirir.
-8. ÇEVİRİ düğmesi yalnız eksik veya kalite denetiminden geçmeyen metinleri yerel NVIDIA GPU ile işler. GPU ortamı yoksa depo kökündeki `GPU` klasörü veya `WAKFU_GPU_RUNTIME` yolu kullanılabilir.
+**WAKFU Türkçe Yama Kurulum Aracı 6.5.0**
 
-KLASÖRLER
-- Kaynak_Kodu: Program, kurulum, paketleme ve GPU kaynak kodları.
-- Ceviri_Verileri: Tek geçerli ana çeviri, manuel onarım, terim ve GPU bağlam JSON'ları.
-- Oyun_Kaynaklari\Guncel: Oyundan alınan güncel temiz kaynaklar.
-- Oyun_Kaynaklari\Orijinal_Yedek: Geri dönüş için temiz oyun dosyaları.
-- Oyun_Kaynaklari\Fontlar: Türkçe karakter fontları.
-- Oyun_Kaynaklari\Yamalar: i18n dışında, çalışma zamanında gelen metinler için doğrulanmış istemci yamaları.
-- Ayarlar: Arayüz ayarı, GPU yolu ve paket önbelleği.
-- Uretilenler: Oyuna kurulmaya hazır JAR dosyaları.
-- Raporlar: Tam kalite, canlı işlem, hata ve arayüz test raporları.
-- Belgeler: Kullanım ve proje bilgileri.
-- Araclar: Tam denetim ve paket üretimi için proje içindeki bağımsız Python çalışma ortamı.
+WAKFU'yu Türkçe oynamak için hazırlanan yama, kurulum aracı sayesinde kolayca kurulabilir.
 
-GÜNCEL KALİTE DURUMU - 29.08.2026
-- Kaynak oyun metni: 154.963.
-- Doğrulanmış çeviri: 97.436.
-- Bilinçli korunan ad: 37.699.
-- Bilinçli korunan teknik metin: 19.828.
-- Eksik çeviri: 0.
-- Tamamen İngilizce kalan: 0.
-- İngilizce kalıntısı bulunan: 0.
-- Biçim/yer tutucu hatası: 0.
-- Ana çeviri JSON'u: 100.344 anahtar.
-- Manuel onarım belleği: 89.863 anahtar.
+### KURULUM
 
-Son insan denetimli gruplar Parti 217'ye kadar uygulandı. Parti 178-217 çalışması; i18n metin düzeltmelerini, özgün kalacak beceri/eşya adlarını, Türkçeleştirilecek görev ve başarım metinlerini, hava durumu saat biçimini, V oyuncu adı görünürlüğünü ve HAAPI üzerinden gelen Talentyre ile Dyw Almanax açıklamalarının güvenli istemci yamalarını kapsar. Bütün büyü/yetenek ve eşya başlıkları özgün İngilizce adıyla korunur; görev başlığı gibi farklı bağlamlarda kullanılan aynı metinler ise bağlama göre Türkçeleştirilir. Emote araç ipuçlarındaki slash komutları aynen korunur. Uretilenler\i18n.jar ve bütün dağıtım paketleri bu verilerle yeniden oluşturuldu; istemci sınıfları gerçek Java üzerinde doğrulandı.
+1. **WAKFU Türkçe Yama Kurulum Aracı 6.5.0** sürümünü indirin.
+2. WAKFU, Ankama Launcher ve Steam'i kapatın.
+3. Kurulum aracını çalıştırın.
+4. Kurulum aracında **WAKFU'nun kurulu olduğu ana oyun klasörünü** seçin.
 
-Güncel kalite denetiminde incelenmesi gereken kayıt kalmamıştır. Korunan ad ve teknik metinler hata değil, oyun uyumluluğu için bilinçli sınıflardır. Program, biçimi güvensiz olan bir çeviriyi oyuna yazmak yerine İngilizce kaynağı korur. Ayrıntılar Raporlar\Wakfu_Ceviri_Ozet.txt ve Raporlar\Wakfu_Ceviri_Sorunlar.tsv dosyalarındadır.
+**Steam kullanıyorsanız**, varsayılan kurulum genellikle:
 
-ÖNEMLİ
-- [#1], {…}, <b>…</b>, [pl], [st…] ve \n gibi oyun işaretlerini silmeyin veya değiştirmeyin.
-- Oyuna kurulum ve geri yükleme sırasında WAKFU ile Ankama Launcher kapalı olsun.
-- Düzenleme için yalnız Ceviri_Verileri klasöründeki dosyaları kullanın; AppData veya eski Codex çıktılarında ikinci kopya oluşturmayın.
-- Program EXE'si ana klasördeyken doğrudan bu düzenli proje yapısını kullanır.
-- Baş üstü boyut seçimi yalnız V ile gösterilen oyuncu/NPC adı ve altındaki unvan satırını etkiler; sohbet ve diğer arayüz metinleri değişmez. Seçim kaydedilir ve farklı bir boyut seçildikten sonra Oyuna Kur ile yeniden uygulanabilir.
+`C:\Program Files (x86)\Steam\steamapps\common\Wakfu`
+
+Steam'i farklı bir diske veya Steam Kütüphanesine kurduysanız:
+
+`...\SteamLibrary\steamapps\common\Wakfu`
+
+**Ankama Launcher kullanıyorsanız**, Ankama Launcher'da WAKFU'nun kurulu olduğu klasörü bulun ve kurulum aracında bu klasörü seçin.
+
+> **Önemli:** Alt klasörlerden birini değil, doğrudan **WAKFU ana oyun klasörünü** seçin.
+
+5. Oyun klasörünü seçtikten sonra Türkçe yamanın kurulumunu başlatın.
+6. Kurulum tamamlandığında WAKFU'yu **Ankama Launcher veya Steam üzerinden** normal şekilde başlatın.
+
+### SÜRÜM BİLGİLERİ
+
+- **Kurulum Aracı:** 6.5.0
+- **Dosya Sürümü:** 6.5.0.0
+- **Kararlı Türkçe Yama:** tr-2026.09.05.4
+
+### TÜRKÇE YAMA HAKKINDA
+
+Türkçe yama, WAKFU'nun oyun içi metinlerini mümkün olduğunca doğal ve oyun bağlamına uygun biçimde Türkçeleştirmek amacıyla hazırlanmıştır.
+
+Çeviri sırasında WAKFU'nun kullandığı özel biçimler, değişkenler, yer tutucular ve oyun tarafından işlenen teknik ifadeler korunur.
+
+Büyü, yetenek ve eşya adları; oyuncuların oyun içi rehberleri, Wiki ve diğer kaynakları rahatça takip edebilmesi amacıyla özgün İngilizce adlarıyla korunabilir.
+
+Görevler, başarımlar, açıklamalar, arayüz metinleri ve diğer içerikler ise bağlamlarına uygun şekilde Türkçeleştirilir.
+
+### ÖNEMLİ
+
+- Kurulum sırasında **WAKFU, Ankama Launcher ve Steam kapalı olmalıdır.**
+- Kurulum aracında **WAKFU'nun ana oyun klasörünü** seçin.
+- Oyun güncellendiğinde Türkçe yamanın yeniden kurulması gerekebilir.
+- Büyük WAKFU güncellemelerinden sonra mevcut yama yeni oyun sürümüyle uyumsuz hale gelebilir.
+- Böyle bir durumda güncel Türkçe yama sürümünün yayımlanmasını bekleyin.
+- Her zaman en güncel kurulum aracını ve kararlı Türkçe yama sürümünü kullanın.
+
+### İNDİRME
+
+**WAKFU Türkçe Yama Kurulum Aracı 6.5.0**
+
+Güncel sürümü projenin GitHub Releases sayfasından indirebilirsiniz.
