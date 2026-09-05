@@ -15,8 +15,14 @@ from pathlib import Path
 
 from .state import atomic_json_write
 
-PATCH_VERSION = re.compile(r"^\d{4}\.\d{2}\.\d{2}\.\d+$")
-GAME_VERSION = re.compile(r"^\d+(?:\.\d+){1,10}$")
+# The updater parses the revision numerically and deliberately rejects a
+# leading-zero revision.  Keep the producer and consumer contracts identical
+# so a package can never be built with a patch version the Setup EXE rejects.
+PATCH_VERSION = re.compile(r"^\d{4}\.\d{2}\.\d{2}\.(?:0|[1-9]\d*)$")
+# Ankama's current WAKFU channel prefixes the dotted game build with a
+# channel/build component (for example ``6.0_1.92.1.5172.314``).  Accept that
+# narrow, numeric form as well as the shorter dotted form used by fixtures.
+GAME_VERSION = re.compile(r"^\d+(?:\.\d+){1,10}(?:_\d+(?:\.\d+){1,10})?$")
 REQUIRED_ENTRIES = ("texts_en.properties", "texts_en_cleaned.properties")
 
 

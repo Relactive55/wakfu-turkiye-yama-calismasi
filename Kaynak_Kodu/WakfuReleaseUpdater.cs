@@ -73,7 +73,9 @@ internal static class WakfuReleaseUpdater {
     internal static IReleaseHttpTransport TestTransportOverride;
 #endif
     static readonly Regex HashPattern = new Regex("^[A-Fa-f0-9]{64}$", RegexOptions.CultureInvariant);
-    static readonly Regex GameVersionPattern = new Regex("^[0-9]+(?:\\.[0-9]+){1,10}$", RegexOptions.CultureInvariant);
+    // Ankama's current channel uses e.g. 6.0_1.92.1.5172.314.  Keep the
+    // accepted form numeric and bounded; do not accept arbitrary tag text.
+    static readonly Regex GameVersionPattern = new Regex("^[0-9]+(?:\\.[0-9]+){1,10}(?:_[0-9]+(?:\\.[0-9]+){1,10})?$", RegexOptions.CultureInvariant);
     static readonly Regex PatchVersionPattern = new Regex("^[0-9]{4}\\.[0-9]{2}\\.[0-9]{2}\\.[0-9]+$", RegexOptions.CultureInvariant);
 
     internal static Uri LatestReleaseUri { get { return new Uri(ApiBase + "/releases/latest"); } }

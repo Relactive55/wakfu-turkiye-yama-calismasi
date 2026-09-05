@@ -4,16 +4,23 @@ on:
   workflow_dispatch:
     inputs:
       game_version:
-        description: Exact approved WAKFU game version, e.g. 1.92.1.5172.314
+        description: Exact approved WAKFU source version (production) or fixture version (test)
         required: true
         type: string
       patch_version:
         description: Patch version in YYYY.MM.DD.N form
         required: true
         type: string
+      test_fixture:
+        description: Build a clearly marked prerelease from an isolated fixture (never production data)
+        required: true
+        default: false
+        type: boolean
 
+# Only the publish job needs write access.  There is no pull_request_target
+# trigger, no PR-branch release path, and no automatic approval or merge.
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: publish-wakfu-release-main
@@ -23,28 +30,161 @@ jobs:
   package-and-release:
     # A manual dispatch from a PR/topic branch must never publish.  The
     # release Environment below still requires its configured reviewers.
-    if: github.ref == 'refs/heads/main'
-    # Configure the repository's "release" Environment with required
-    # reviewers. This is the explicit human approval boundary after PR merge.
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
     environment: release
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           ref: main
+          fetch-depth: 1
       - uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
         with:
           python-version: '3.11'
-      - name: Run release manifest tests
-        run: python -m unittest automation.tests.test_release_package -v
-      - name: Fetch approved source and build i18n package
+      - name: Set runner-local paths
+        shell: bash
         run: |
-          echo 'Release creation is deliberately disabled until update_wakfu_localization.py has produced a reviewed state/snapshot.'
-          echo 'This guard prevents publishing an unreviewed or unverifiable PR output.'
-          exit 1
+          set -euo pipefail
+          echo "RELEASE_DIR=${RUNNER_TEMP}/wakfu-release-assets" >> "${GITHUB_ENV}"
+          echo "VERIFY_DIR=${RUNNER_TEMP}/wakfu-release-verify" >> "${GITHUB_ENV}"
+      - name: Assert the checked-out source is main
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${GITHUB_REF}" = "refs/heads/main"
+          test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
+          test "$(git symbolic-ref --short HEAD)" = "main"
+      - name: Build isolated prerelease fixture
+        if: inputs.test_fixture == true
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "${RELEASE_DIR}"
+          python -m automation.release_pipeline \
+            --test-fixture \
+            --output-dir "${RELEASE_DIR}" \
+            --game-version "${{ inputs.game_version }}" \
+            --patch-version "${{ inputs.patch_version }}" | tee "${RUNNER_TEMP}/release-build.json"
+      - name: Build approved production package from main
+        if: inputs.test_fixture != true
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "${RELEASE_DIR}"
+          python -m automation.build_approved_release \
+            --game-version "${{ inputs.game_version }}" \
+            --patch-version "${{ inputs.patch_version }}" \
+            --output-dir "${RELEASE_DIR}" | tee "${RUNNER_TEMP}/release-build.json"
+      - name: Enforce the two-asset release contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f "${RELEASE_DIR}/manifest.json"
+          test -f "${RELEASE_DIR}/i18n.jar"
+          test "$(find "${RELEASE_DIR}" -maxdepth 1 -type f | wc -l)" -eq 2
+      - name: Refuse tag reuse (immutable releases)
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ inputs.test_fixture }}" = "true" ]; then
+            tag="tr-test-${{ inputs.patch_version }}"
+          else
+            tag="tr-${{ inputs.patch_version }}"
+          fi
+          if gh release view "${tag}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+            echo "Release/tag already exists: ${tag}" >&2
+            exit 1
+          fi
+          if git ls-remote --exit-code origin "refs/tags/${tag}" >/dev/null 2>&1; then
+            echo "Git tag already exists: ${tag}" >&2
+            exit 1
+          fi
+          echo "RELEASE_TAG=${tag}" >> "${GITHUB_ENV}"
+      - name: Publish the two verified assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          notes="${RUNNER_TEMP}/release-notes.md"
+          if [ "${{ inputs.test_fixture }}" = "true" ]; then
+            title="WAKFU Turkish patch TEST ${RELEASE_TAG}"
+            printf '%s\n\n%s\n' 'TEST / PRE-RELEASE ONLY' 'This fixture release is not a production WAKFU patch and must never be used by the stable updater.' > "${notes}"
+            gh release create "${RELEASE_TAG}" \
+              "${RELEASE_DIR}/manifest.json" "${RELEASE_DIR}/i18n.jar" \
+              --repo "${GITHUB_REPOSITORY}" --target "${GITHUB_SHA}" \
+              --title "${title}" --notes-file "${notes}" --prerelease
+          else
+            title="WAKFU Türkçe Yama ${RELEASE_TAG#tr-}"
+            printf 'Approved WAKFU Turkish patch %s.\n' "${RELEASE_TAG}" > "${notes}"
+            gh release create "${RELEASE_TAG}" \
+              "${RELEASE_DIR}/manifest.json" "${RELEASE_DIR}/i18n.jar" \
+              --repo "${GITHUB_REPOSITORY}" --target "${GITHUB_SHA}" \
+              --title "${title}" --notes-file "${notes}"
+          fi
+      - name: Download and verify the published assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "${VERIFY_DIR}"
+          mkdir -p "${VERIFY_DIR}"
+          gh release view "${RELEASE_TAG}" --repo "${GITHUB_REPOSITORY}" --json isDraft,isPrerelease,tagName,assets,url > "${RUNNER_TEMP}/release-view.json"
+          python - "${RUNNER_TEMP}/release-view.json" "${RELEASE_DIR}" "${VERIFY_DIR}" "${{ inputs.test_fixture }}" "${RELEASE_TAG}" <<'PY'
+          import hashlib
+          import json
+          import os
+          import pathlib
+          import subprocess
+          import sys
 
-# When the reviewed state/snapshot producer is enabled, the guarded step above
-# will: download its exact source JAR, run build_wakfu_jar.py and wakfu_audit.py,
-# run automation.release_package, then use:
-# gh release create "tr-${{ inputs.patch_version }}" release/i18n.jar release/manifest.json --title "WAKFU Türkçe Yama ${{ inputs.patch_version }}" --generate-notes
-# No raw/main-branch JAR is ever an installer input.
+          view_path = pathlib.Path(sys.argv[1])
+          local_dir = pathlib.Path(sys.argv[2])
+          verify_dir = pathlib.Path(sys.argv[3])
+          fixture = sys.argv[4]
+          tag = sys.argv[5]
+          view = json.loads(view_path.read_text())
+          if view["isDraft"]:
+              raise SystemExit("draft Release was published")
+          if bool(view["isPrerelease"]) != (fixture == "true"):
+              raise SystemExit("prerelease flag does not match the requested mode")
+          if view["tagName"] != tag:
+              raise SystemExit("Release tag mismatch")
+          assets = view["assets"]
+          if {item["name"] for item in assets} != {"manifest.json", "i18n.jar"} or len(assets) != 2:
+              raise SystemExit("Release contains an unexpected asset set")
+          subprocess.run([
+              "gh", "release", "download", tag, "--repo", os.environ["GITHUB_REPOSITORY"],
+              "--dir", str(verify_dir), "--pattern", "manifest.json", "--pattern", "i18n.jar", "--clobber",
+          ], check=True)
+          manifest = json.loads((verify_dir / "manifest.json").read_text())
+          jar = verify_dir / "i18n.jar"
+          if manifest.get("file") != "i18n.jar" or manifest.get("size") != jar.stat().st_size:
+              raise SystemExit("downloaded manifest size/file check failed")
+          digest = hashlib.sha256(jar.read_bytes()).hexdigest()
+          if digest.lower() != manifest.get("sha256", "").lower():
+              raise SystemExit("downloaded i18n.jar SHA-256 mismatch")
+          local_manifest = json.loads((local_dir / "manifest.json").read_text())
+          if manifest != local_manifest:
+              raise SystemExit("downloaded manifest differs from the local validated build")
+          local_digest = hashlib.sha256((local_dir / "i18n.jar").read_bytes()).hexdigest()
+          if digest != local_digest:
+              raise SystemExit("downloaded asset differs from local build")
+          print("RELEASE_ASSET_VERIFY_OK", view["url"])
+          PY
+      - name: Write release summary
+        shell: bash
+        run: |
+          {
+            echo "### Release pipeline PASS"
+            echo "- mode: ${{ inputs.test_fixture == true && 'TEST / PRE-RELEASE' || 'STABLE (manual approval required)' }}"
+            echo "- tag: ${RELEASE_TAG}"
+            echo "- game_version: ${{ inputs.game_version }}"
+            echo "- patch_version: ${{ inputs.patch_version }}"
+            echo "- assets: manifest.json, i18n.jar"
+            echo "- source: main @ ${GITHUB_SHA}"
+            echo "- release creation: completed only after build/validation/hash verification"
+          } >> "${GITHUB_STEP_SUMMARY}"

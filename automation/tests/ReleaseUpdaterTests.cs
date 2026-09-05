@@ -94,8 +94,12 @@ static class ReleaseUpdaterTests {
     static LocalFakeGitHubTransport ServerFor(Dictionary<string, ResponseSpec> routes) { return new LocalFakeGitHubTransport(routes); }
 
     static void TestContractAndHash(string root) {
-        var fixture = new Fixture(); string data = Path.Combine(root, "payload.jar"); File.WriteAllBytes(data, fixture.PatchJar); var release = WakfuReleaseUpdater.ParseLatestRelease(fixture.ReleaseJson); var manifest = WakfuReleaseUpdater.ParseManifest(fixture.ManifestJson, release.Tag); WakfuReleaseUpdater.ValidateReleaseContract(release, manifest); WakfuReleaseUpdater.VerifyDownloadedPatch(data, manifest);
+        var fixture = new Fixture(); string data = Path.Combine(root, "payload.jar"); File.WriteAllBytes(data, fixture.PatchJar); var release = WakfuReleaseUpdater.ParseLatestRelease(fixture.ReleaseJson); var manifest = WakfuReleaseUpdater.ParseManifest(fixture.ManifestJson, release.Tag); WakfuReleaseUpdater.ValidateReleaseContract(release, manifest); WakfuReleaseUpdater.VerifyDownloadedPatch(data, manifest); string channelManifest = fixture.ManifestJson.Replace("1.92.1.5172.314", "6.0_1.92.1.5172.314"); Require(WakfuReleaseUpdater.ParseManifest(channelManifest, release.Tag).GameVersion == "6.0_1.92.1.5172.314", "Ankama channel game version was rejected");
         File.WriteAllBytes(data, new byte[] { 1, 2, 3, 5 }); ExpectFailure("SHA mismatch", delegate { WakfuReleaseUpdater.VerifyDownloadedPatch(data, manifest); }); Require(WakfuReleaseUpdater.IsAllowedDownloadUri(new Uri("https://api.github.com/repos/Relactive/wakfu-turkiye-yama-calismasi/releases/latest")), "fixed GitHub API rejected"); Require(!WakfuReleaseUpdater.IsAllowedDownloadUri(new Uri("http://api.github.com/repos/a")), "HTTP accepted"); Require(!WakfuReleaseUpdater.IsAllowedDownloadUri(new Uri("https://example.invalid/x")), "arbitrary host accepted"); Require(WakfuReleaseUpdater.IsOfflineFailure(new WebException("offline")), "offline failure not classified");
+    }
+
+    static void TestStableReleaseFlags() {
+        var fixture = new Fixture(); string draft = fixture.ReleaseJson.Replace("\"draft\":false", "\"draft\":true"); string prerelease = fixture.ReleaseJson.Replace("\"prerelease\":false", "\"prerelease\":true"); ExpectFailure("draft release accepted", delegate { WakfuReleaseUpdater.ParseLatestRelease(draft); }); ExpectFailure("prerelease release accepted", delegate { WakfuReleaseUpdater.ParseLatestRelease(prerelease); });
     }
 
     static void TestFakeHttpEndToEnd(string root) {
@@ -202,7 +206,7 @@ static class ReleaseUpdaterTests {
     [STAThread] static int Main() {
         string root = Path.Combine(Path.GetTempPath(), "WakfuReleaseUpdaterTests_" + Guid.NewGuid().ToString("N")); Directory.CreateDirectory(root);
         try {
-            var tests = new Dictionary<string, Action> { { "contract/hash/allowlist", delegate { TestContractAndHash(root); } }, { "fake Release network E2E", delegate { TestFakeHttpEndToEnd(root); } }, { "HTTP failure matrix", delegate { TestHttpFailureMatrix(root); } }, { "patch version parser", TestPatchVersions }, { "install/backup/state/rollback", delegate { TestInstallAndRollback(root); } }, { "transaction rollback primitive", delegate { TestRollbackPrimitive(root); } } };
+            var tests = new Dictionary<string, Action> { { "contract/hash/allowlist", delegate { TestContractAndHash(root); } }, { "stable Release draft/prerelease filtering", TestStableReleaseFlags }, { "fake Release network E2E", delegate { TestFakeHttpEndToEnd(root); } }, { "HTTP failure matrix", delegate { TestHttpFailureMatrix(root); } }, { "patch version parser", TestPatchVersions }, { "install/backup/state/rollback", delegate { TestInstallAndRollback(root); } }, { "transaction rollback primitive", delegate { TestRollbackPrimitive(root); } } };
             string external = Environment.GetEnvironmentVariable("WAKFU_FULL_SIMULATION_FIXTURE");
             if (!String.IsNullOrWhiteSpace(external)) tests.Add("full simulated external Release -> Setup", delegate { TestExternalFullSimulation(external); });
             foreach (var test in tests) { test.Value(); Console.WriteLine("PASS|" + test.Key); }
