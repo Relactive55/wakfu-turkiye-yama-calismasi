@@ -78,6 +78,13 @@ internal static class WakfuReleaseUpdater {
     static readonly Regex GameVersionPattern = new Regex("^[0-9]+(?:\\.[0-9]+){1,10}(?:_[0-9]+(?:\\.[0-9]+){1,10})?$", RegexOptions.CultureInvariant);
     static readonly Regex PatchVersionPattern = new Regex("^[0-9]{4}\\.[0-9]{2}\\.[0-9]{2}\\.[0-9]+$", RegexOptions.CultureInvariant);
 
+    // GitHub requires modern TLS.  Do this inside the fixed production
+    // updater so the shipped Setup does not depend on an old .NET default;
+    // this does not create an endpoint/configuration override.
+    static WakfuReleaseUpdater() {
+        try { ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12; } catch { }
+    }
+
     internal static Uri LatestReleaseUri { get { return new Uri(ApiBase + "/releases/latest"); } }
 
     // Fixed production transport. The shipped Setup has no endpoint setting;
