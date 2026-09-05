@@ -25,6 +25,10 @@ def _write_jar(path: Path, rows: list[str]) -> None:
     with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_STORED) as archive:
         for name in ("texts_en.properties", "texts_en_cleaned.properties"):
             info = zipfile.ZipInfo(name, date_time=(1980, 1, 1, 0, 0, 0))
+            # ``ZipInfo`` defaults to the host OS (0 on Windows, 3 on
+            # Unix).  Pin it so the fixture bytes are identical on the
+            # developer machine and the Ubuntu Actions runner.
+            info.create_system = 0
             info.compress_type = zipfile.ZIP_STORED
             info.external_attr = 0o644 << 16
             archive.writestr(info, "\n".join(rows) + "\n")
