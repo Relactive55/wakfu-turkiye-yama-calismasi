@@ -18,8 +18,8 @@ using Microsoft.Win32;
 [assembly: AssemblyCompany("Wakfu Türkçe Yama Topluluğu")]
 [assembly: AssemblyProduct("Wakfu Türkçe Yama")]
 [assembly: AssemblyCopyright("Copyright © 2026 Wakfu Türkçe Yama Topluluğu")]
-[assembly: AssemblyVersion("6.5.9.0")]
-[assembly: AssemblyFileVersion("6.5.9.0")]
+[assembly: AssemblyVersion("6.5.11.0")]
+[assembly: AssemblyFileVersion("6.5.11.0")]
 [assembly: AssemblyInformationalVersion("Wakfu Türkçe Yama")]
 
 static class WakfuSetupApp {
