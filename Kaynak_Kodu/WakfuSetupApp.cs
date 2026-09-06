@@ -18,8 +18,8 @@ using Microsoft.Win32;
 [assembly: AssemblyCompany("Wakfu Türkçe Yama Topluluğu")]
 [assembly: AssemblyProduct("Wakfu Türkçe Yama")]
 [assembly: AssemblyCopyright("Copyright © 2026 Wakfu Türkçe Yama Topluluğu")]
-[assembly: AssemblyVersion("6.5.7.0")]
-[assembly: AssemblyFileVersion("6.5.7.0")]
+[assembly: AssemblyVersion("6.5.8.0")]
+[assembly: AssemblyFileVersion("6.5.8.0")]
 [assembly: AssemblyInformationalVersion("Wakfu Türkçe Yama")]
 
 static class WakfuSetupApp {
@@ -452,12 +452,13 @@ static class WakfuSetupApp {
             var overheadLabel=new Label{Text="Nick Font Boyutu:"};overheadLabel.SetBounds(20,100,165,27);overheadSize.DropDownStyle=ComboBoxStyle.DropDownList;overheadSize.BackColor=Color.FromArgb(54,54,60);overheadSize.ForeColor=Color.WhiteSmoke;overheadSize.Items.AddRange(new object[]{"Normal (28 / 24)","Küçük (24 / 20)","Çok küçük (20 / 16) — Önerilen"});overheadSize.SetBounds(190,96,300,30);string preferred=ReadOverheadPreference();overheadSize.SelectedIndex=preferred=="normal"?0:preferred=="tiny"?2:1;
             var install=new Button{Text="Türkçe Yamayı Yükle",BackColor=Color.FromArgb(35,120,70),ForeColor=Color.White,FlatStyle=(System.Windows.Forms.FlatStyle)1};install.SetBounds(110,143,245,45);var restore=new Button{Text="Türkçe Yamayı Kaldır / Orijinali Yükle",BackColor=Color.FromArgb(120,95,35),ForeColor=Color.White,FlatStyle=(System.Windows.Forms.FlatStyle)1};restore.SetBounds(375,143,300,45);
             status.Text="Güncellemeler kontrol ediliyor...";status.AutoEllipsis=true;status.SetBounds(20,206,735,25);
+            var version=new Label{Text="EXE v"+System.Diagnostics.FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location).FileVersion,Font=new Font("Segoe UI",9),ForeColor=Color.FromArgb(170,170,175),TextAlign=ContentAlignment.MiddleLeft};version.SetBounds(20,276,180,25);
             var brand=new Label{Text="Relactive",Font=new Font("Segoe UI",10,FontStyle.Bold|FontStyle.Italic),ForeColor=Color.FromArgb(220,70,70),TextAlign=ContentAlignment.MiddleRight};brand.SetBounds(650,276,105,25);
             wakfu.Click+=(s,e)=>{using(var d=new FolderBrowserDialog{Description="Doğrudan Wakfu oyun klasörünü seçin"})if(d.ShowDialog()==DialogResult.OK){if(IsWakfu(d.SelectedPath))path.Text=d.SelectedPath;else MessageBox.Show("Seçilen klasör geçerli bir Wakfu klasörü değil. İçinde contents\\i18n\\i18n_en.jar bulunmalıdır.","Geçersiz Wakfu klasörü",MessageBoxButtons.OK,MessageBoxIcon.Warning);}};
             overheadSize.SelectedIndexChanged+=(s,e)=>{try{WriteOverheadPreference(SelectedOverheadProfile());}catch{}};
             Shown+=(s,e)=>CheckLatestRelease();
             install.Click+=(s,e)=>InstallAvailableRelease();restore.Click+=(s,e)=>{if(MessageBox.Show("Yalnızca Türkçe yama, font ve arayüz değişiklikleri kaldırılacak; yedekteki resmî oyun dosyaları geri yüklenecek. Devam edilsin mi?","Türkçe yamayı kaldır",MessageBoxButtons.YesNo,MessageBoxIcon.Warning)==DialogResult.Yes)Run(()=>Restore(path.Text),"Türkçe yama kaldırıldı; orijinal oyun dosyaları geri yüklendi.");};
-            Controls.AddRange(new Control[]{label,path,wakfu,overheadLabel,overheadSize,install,restore,status,brand});
+            Controls.AddRange(new Control[]{label,path,wakfu,overheadLabel,overheadSize,install,restore,status,version,brand});
         }
         async void Run(Action action,string ok){try{Enabled=false;UseWaitCursor=true;status.Text="İşlem yapılıyor…";await Task.Run(action);status.Text=ok;MessageBox.Show(ok,"İşlem tamam",MessageBoxButtons.OK,MessageBoxIcon.Information);}catch(Exception ex){MessageBox.Show(ex.Message,"İşlem hatası",MessageBoxButtons.OK,MessageBoxIcon.Error);}finally{UseWaitCursor=false;Enabled=true;}}
         sealed class Candidate { internal LatestPatchRelease Release; internal PatchManifest Manifest; }
