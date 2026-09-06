@@ -162,6 +162,99 @@ jobs:
   # production diff output and it can only commit the disposable fixture
   # directory below.  The future production path must keep the same guard:
   # empty NEW/MODIFIED/REMOVED means NO_CHANGES and no branch/commit/PR.
+  create-production-pr:
+    if: (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.dry_run == false && inputs.test_fixture == false)) && needs.inspect-open-production-prs.result == 'success' && needs.inspect-upstream.outputs.has_changes == 'true'
+    needs: [inspect-open-production-prs, inspect-upstream]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    env:
+      ARGOS_DEVICE_TYPE: cpu
+      ARGOS_DEVICE_COUNT: '1'
+      GAME_VERSION: ${{ needs.inspect-upstream.outputs.game_version }}
+      SOURCE_SHA1: ${{ needs.inspect-upstream.outputs.source_sha1 }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
+        with:
+          python-version: '3.11'
+      - name: Create isolated translation runtime
+        run: python -m venv "$RUNNER_TEMP/argos-venv"
+      - name: Install exact translation runtime
+        run: "$RUNNER_TEMP/argos-venv/bin/python -m pip install --disable-pip-version-check -r requirements-translation.txt"
+      - name: Download and verify locked Argos model
+        run: |
+          "$RUNNER_TEMP/argos-venv/bin/python" - "$RUNNER_TEMP/translate-en_tr-1_5.argosmodel" <<'PY'
+          import hashlib, json, sys, urllib.request
+          from pathlib import Path
+          lock = json.loads(Path("automation/model-lock.json").read_text(encoding="utf-8"))
+          target = Path(sys.argv[1])
+          request = urllib.request.Request(lock["url"], headers={"User-Agent": "WakfuTurkceCeviri/production-pr"})
+          with urllib.request.urlopen(request, timeout=180) as response, target.open("wb") as output:
+              while chunk := response.read(1024 * 1024): output.write(chunk)
+          digest = hashlib.sha256(target.read_bytes()).hexdigest()
+          if target.stat().st_size != lock["size_bytes"] or digest.lower() != lock["sha256"].lower():
+              raise SystemExit("ARGOS_MODEL_VERIFICATION_FAILED")
+          PY
+      - name: Build and validate production candidate
+        run: |
+          set -euo pipefail
+          export XDG_CONFIG_HOME="$RUNNER_TEMP/argos-config"
+          export XDG_DATA_HOME="$RUNNER_TEMP/argos-data"
+          export XDG_CACHE_HOME="$RUNNER_TEMP/argos-cache"
+          "$RUNNER_TEMP/argos-venv/bin/python" -m automation.production_pr_update \
+            --output-dir "$RUNNER_TEMP/production-pr-output" \
+            --model-path "$RUNNER_TEMP/translate-en_tr-1_5.argosmodel" \
+            --model-lock automation/model-lock.json | tee "$RUNNER_TEMP/production-update.json"
+      - name: Commit candidate and open production PR
+        run: |
+          set -euo pipefail
+          report="$RUNNER_TEMP/production-pr-output/production_update_report.json"
+          test -f "$report"
+          status=$(python -c 'import json,sys; print(json.load(open(sys.argv[1]))["status"])' "$report")
+          test "$status" = "PRODUCTION_CANDIDATE"
+          branch="codex/wakfu-localization-${GAME_VERSION//[^A-Za-z0-9.-]/-}-${SOURCE_SHA1:0:8}"
+          if gh pr list --repo "$GITHUB_REPOSITORY" --state open --head "$branch" --json number --jq 'length' | grep -qv '^0$'; then
+            echo "OPEN_PRODUCTION_PR_ALREADY_EXISTS"
+            exit 0
+          fi
+          git switch --create "$branch"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Ceviri_Verileri/wakfu_tr_ceviri.json automation/state.json automation/snapshots
+          git diff --cached --quiet && { echo "NO_CANDIDATE_CHANGES"; exit 0; }
+          git commit -m "WAKFU localization update for ${GAME_VERSION}"
+          git push --set-upstream origin "$branch"
+          python - "$report" "$RUNNER_TEMP/production-pr-body.md" <<'PY'
+          import json, sys
+          report=json.load(open(sys.argv[1],encoding='utf-8'))
+          diff=report['diff']; counts=report['translation_counts']
+          body=f"""## WAKFU localization update
+
+          **Human review required before merge.**
+
+          - Game version: `{report['game_version']}`
+          - Source SHA-1: `{report['source_sha1']}`
+          - NEW: `{diff['NEW']}`
+          - MODIFIED: `{diff['MODIFIED']}`
+          - REMOVED (report only): `{diff['REMOVED']}`
+          - Translation Memory: `{counts.get('memory', 0)}`
+          - Glossary: `{counts.get('glossary-key', 0) + counts.get('glossary-value', 0)}`
+          - Argos: `{counts.get('argos', 0)}`
+          - Validation: `PASS`
+
+          State and the verified source snapshot are advanced in this candidate branch only; no Release is created until this PR is merged and separately approved."""
+          open(sys.argv[2],'w',encoding='utf-8').write(body)
+          PY
+          gh pr create --repo "$GITHUB_REPOSITORY" --base main --head "$branch" \
+            --title "WAKFU localization update: ${GAME_VERSION}" \
+            --body-file "$RUNNER_TEMP/production-pr-body.md"
+
   create-test-pr:
     if: github.event_name == 'workflow_dispatch' && inputs.test_fixture == true && needs.inspect-upstream.result == 'success'
     needs: inspect-upstream
