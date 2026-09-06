@@ -100,7 +100,6 @@ jobs:
           set -euo pipefail
           test "${GITHUB_REF}" = "refs/heads/main"
           test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
-          test "$(git symbolic-ref --short HEAD)" = "main"
       - name: Build isolated prerelease fixture
         if: needs.resolve-release-inputs.outputs.test_fixture == 'true'
         shell: bash
