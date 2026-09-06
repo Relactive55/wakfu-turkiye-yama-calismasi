@@ -2,7 +2,7 @@ param([string]$OutputPath='')
 $ErrorActionPreference='Stop'
 $sourceDir=Split-Path -Parent $MyInvocation.MyCommand.Path
 $projectRoot=if((Split-Path -Leaf $sourceDir)-eq'Kaynak_Kodu'){Split-Path -Parent $sourceDir}else{$sourceDir}
-$output=if([string]::IsNullOrWhiteSpace($OutputPath)){Join-Path $projectRoot 'Wakfu_Turkce_Yama_Setup.exe'}else{[IO.Path]::GetFullPath($OutputPath)}
+$output=if([string]::IsNullOrWhiteSpace($OutputPath)){Join-Path $projectRoot 'Wakfu Türkçe Yama.exe'}else{[IO.Path]::GetFullPath($OutputPath)}
 $outputDir=Split-Path -Parent $output
 if(-not(Test-Path -LiteralPath $outputDir)){New-Item -ItemType Directory -Path $outputDir -Force|Out-Null}
 
@@ -53,7 +53,7 @@ try{
     $csc=Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\csc.exe'
     if(-not(Test-Path -LiteralPath $csc)){$csc=Join-Path $env:WINDIR 'Microsoft.NET\Framework\v4.0.30319\csc.exe'}
     if(-not(Test-Path -LiteralPath $csc)){throw '.NET Framework C# derleyicisi bulunamadı.'}
-    $tempExe=Join-Path $staging 'Wakfu_Turkce_Yama_Setup.exe'
+    $tempExe=Join-Path $staging 'Wakfu Türkçe Yama.exe'
     $response=@('/nologo','/target:winexe','/optimize+','/platform:anycpu',('/out:"'+$tempExe+'"'),('/win32manifest:"'+$manifest+'"'),'/reference:System.dll','/reference:System.Core.dll','/reference:System.Web.Extensions.dll','/reference:System.Windows.Forms.dll','/reference:System.Drawing.dll','/reference:System.IO.Compression.dll','/reference:System.IO.Compression.FileSystem.dll',('/resource:"'+(Join-Path $staging 'i18n.jar')+'",WakfuPatch.i18n.jar'),('/resource:"'+(Join-Path $staging 'i18n_en.jar')+'",WakfuPatch.base_i18n.jar'),('/resource:"'+(Join-Path $staging 'wakfu_tr_ceviri.json')+'",WakfuPatch.translations.json'),('/resource:"'+(Join-Path $staging 'terim_duzeltmeleri.json')+'",WakfuPatch.terms.json'),('/resource:"'+(Join-Path $staging 'manual_repairs_v23.json')+'",WakfuPatch.manual.json'),('/resource:"'+(Join-Path $staging 'almanax_bgU.class')+'",WakfuPatch.almanax_bgU.class'),('/resource:"'+$distributionPath+'",WakfuPatch.distribution_manifest.json'))
     $response+='/win32icon:"'+(Join-Path $staging 'wakfu_patch_icon.ico')+'"'
     foreach($font in $fontNames){$response+='/resource:"'+(Join-Path $staging $font)+'",WakfuPatch.'+$font}

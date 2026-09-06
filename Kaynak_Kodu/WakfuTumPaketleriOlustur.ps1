@@ -23,7 +23,7 @@ if(-not$SkipJarBuild){
     if($LASTEXITCODE-ne0-or-not(Test-Path -LiteralPath (Join-Path $projectRoot 'Uretilenler\i18n.jar'))){throw ($buildOutput-join"`n")}
 }
 
-$setupOutput=Join-Path $projectRoot 'Wakfu_Turkce_Yama_Setup.exe'
+$setupOutput=Join-Path $projectRoot 'Wakfu Türkçe Yama.exe'
 $setupResult=@(& (Join-Path $sourceDir 'WakfuSetupOlustur.ps1') -OutputPath $setupOutput 2>&1)
 if($LASTEXITCODE-ne0-or-not(Test-Path -LiteralPath $setupOutput)){throw ($setupResult-join"`n")}
 
@@ -78,7 +78,7 @@ foreach($oldDir in @(Get-ChildItem -LiteralPath $resolvedRoot -Directory -ErrorA
 }
 New-Item -ItemType Directory -Path $distributionDir -Force|Out-Null
 Get-ChildItem -LiteralPath $resolvedDir -Force|Remove-Item -Recurse -Force
-$publicSetup=Join-Path $resolvedDir 'Wakfu_Turkce_Yama_Setup.exe'
+$publicSetup=Join-Path $resolvedDir 'Wakfu Türkçe Yama.exe'
 Copy-Item -LiteralPath $setupOutput -Destination $publicSetup -Force
 $publicFiles=@(Get-ChildItem -LiteralPath $resolvedDir -File)
 if($publicFiles.Count-ne1-or-not(Test-Path -LiteralPath $publicSetup)){throw 'Genel dağıtım klasörü yalnızca Türkçe yama kurulum EXE dosyasını içermelidir.'}

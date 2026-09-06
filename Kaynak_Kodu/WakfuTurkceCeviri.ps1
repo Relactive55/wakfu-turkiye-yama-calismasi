@@ -470,7 +470,7 @@ if(-not(Test-Path -LiteralPath $AuditPython)){
     }
 }
 $SetupBuilder = Join-Path $ToolDir 'WakfuSetupOlustur.ps1'
-$SetupExe = Join-Path $ProjectRoot 'Wakfu_Turkce_Yama_Setup.exe'
+$SetupExe = Join-Path $ProjectRoot 'Wakfu Türkçe Yama.exe'
 $script:GpuProcess = $null
 $script:GpuResultFile = $null
 $script:Entries = @()
@@ -2049,7 +2049,7 @@ function Build-SetupInstaller {
         $dialog=New-Object Windows.Forms.SaveFileDialog
         $dialog.Title='Wakfu Türkçe Yama Kurulum EXE dosyasını kaydet'
         $dialog.Filter='Windows uygulaması (*.exe)|*.exe'
-        $dialog.FileName='Wakfu_Turkce_Yama_Setup.exe'
+        $dialog.FileName='Wakfu Türkçe Yama.exe'
         $dialog.InitialDirectory=$ProjectRoot
         $dialog.OverwritePrompt=$true
         if($dialog.ShowDialog()-ne[Windows.Forms.DialogResult]::OK){$setupStatus.Text='EXE oluşturma iptal edildi.';return}
