@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.IO.Compression;
+using System.Net;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
@@ -17,8 +18,8 @@ using Microsoft.Win32;
 [assembly: AssemblyCompany("Wakfu Türkçe Yama Topluluğu")]
 [assembly: AssemblyProduct("Wakfu Türkçe Yama")]
 [assembly: AssemblyCopyright("Copyright © 2026 Wakfu Türkçe Yama Topluluğu")]
-[assembly: AssemblyVersion("6.5.0.0")]
-[assembly: AssemblyFileVersion("6.5.0.0")]
+[assembly: AssemblyVersion("6.5.7.0")]
+[assembly: AssemblyFileVersion("6.5.7.0")]
 [assembly: AssemblyInformationalVersion("Wakfu Türkçe Yama")]
 
 static class WakfuSetupApp {
@@ -33,8 +34,27 @@ static class WakfuSetupApp {
 
     [STAThread] static void Main(string[] args){
         if(args!=null&&args.Length>0){try{string game=null,profile=null;for(int i=0;i<args.Length;i++){if(String.Equals(args[i],"--install",StringComparison.OrdinalIgnoreCase)&&i+1<args.Length)game=args[++i];else if(String.Equals(args[i],"--overhead-size",StringComparison.OrdinalIgnoreCase)&&i+1<args.Length)profile=args[++i];else throw new ArgumentException("Kullanım: --install <Wakfu klasörü> --overhead-size <normal|small|tiny>");}if(String.IsNullOrWhiteSpace(game))throw new ArgumentException("Wakfu klasörü belirtilmedi.");Install(game,NormalizeOverheadProfile(profile));}catch(Exception ex){Console.Error.WriteLine(ex.Message);Environment.ExitCode=1;}return;}
+        TryInstallerSelfUpdate();
         Application.EnableVisualStyles();Application.SetCompatibleTextRenderingDefault(false);Application.Run(new SetupForm());
     }
+    static void TryInstallerSelfUpdate(){
+        try{
+            string exe=Assembly.GetExecutingAssembly().Location;if(String.IsNullOrWhiteSpace(exe)||!File.Exists(exe)||Environment.GetEnvironmentVariable("WAKFU_INSTALLER_UPDATE_CHILD")=="1")return;
+            ServicePointManager.SecurityProtocol=SecurityProtocolType.Tls12;
+            var req=(HttpWebRequest)WebRequest.Create("https://api.github.com/repos/Relactive/wakfu-turkiye-yama-calismasi/releases?per_page=100");req.UserAgent="WakfuTurkceYamaSetup/1.0";req.Accept="application/vnd.github+json";req.Timeout=5000;
+            string json;using(var res=(HttpWebResponse)req.GetResponse())using(var reader=new StreamReader(res.GetResponseStream(),Encoding.UTF8))json=reader.ReadToEnd();
+            var list=new JavaScriptSerializer{MaxJsonLength=8*1024*1024}.DeserializeObject(json) as System.Collections.ArrayList;if(list==null)return;Version current=InstallerVersion(System.Diagnostics.FileVersionInfo.GetVersionInfo(exe).FileVersion);Dictionary<string,object> chosen=null;Version best=null;
+            foreach(object raw in list){var r=raw as Dictionary<string,object>;if(r==null||Bool(r,"draft")||Bool(r,"prerelease"))continue;string tag=Text(r,"tag_name");Match m=Regex.Match(tag??"","^installer-(\\d+)\\.(\\d+)\\.(\\d+)$");if(!m.Success)continue;Version v=new Version(Int32.Parse(m.Groups[1].Value),Int32.Parse(m.Groups[2].Value),0);if(current!=null&&v<=current)continue;if(best==null||v>best){best=v;chosen=r;}}
+            if(chosen==null)return;var assets=chosen["assets"] as System.Collections.ArrayList;if(assets==null)return;Dictionary<string,object> asset=null;foreach(object raw in assets){var a=raw as Dictionary<string,object>;if(a!=null&&Regex.IsMatch(Text(a,"name"),"^Wakfu.*\\.exe$",RegexOptions.IgnoreCase)){asset=a;break;}}if(asset==null)return;long size=Long(asset,"size");string digest=Text(asset,"digest");if(size<=0||size>100*1024*1024||!Regex.IsMatch(digest??"","^sha256:[0-9a-fA-F]{64}$"))return;
+            string tagName=Text(chosen,"tag_name"),name=Text(asset,"name");Uri uri=new Uri("https://github.com/Relactive/wakfu-turkiye-yama-calismasi/releases/download/"+Uri.EscapeDataString(tagName)+"/"+Uri.EscapeDataString(name));if(uri.Scheme!="https"||uri.Host!="github.com")return;string temp=exe+"."+Guid.NewGuid().ToString("N")+".update";var dl=(HttpWebRequest)WebRequest.Create(uri);dl.UserAgent=req.UserAgent;dl.Timeout=30000;using(var res=(HttpWebResponse)dl.GetResponse())using(var input=res.GetResponseStream())using(var output=new FileStream(temp,FileMode.CreateNew))input.CopyTo(output);if(new FileInfo(temp).Length!=size||!String.Equals("sha256:"+LowerHash(temp),digest,StringComparison.OrdinalIgnoreCase)){try{File.Delete(temp);}catch{}return;}
+            string backup=exe+".previous",cmd="/d /c timeout /t 2 /nobreak >nul & move /Y \""+exe+"\" \""+backup+"\" >nul & move /Y \""+temp+"\" \""+exe+"\" >nul & start \"\" \""+exe+"\"";var start=new System.Diagnostics.ProcessStartInfo{FileName=Environment.GetEnvironmentVariable("ComSpec"),Arguments=cmd,UseShellExecute=false,CreateNoWindow=true};start.EnvironmentVariables["WAKFU_INSTALLER_UPDATE_CHILD"]="1";System.Diagnostics.Process.Start(start);Environment.Exit(0);
+        }catch{}
+    }
+    static Version InstallerVersion(string s){Match m=Regex.Match(s??"","^(\\d+)\\.(\\d+)\\.(\\d+)");return m.Success?new Version(Int32.Parse(m.Groups[1].Value),Int32.Parse(m.Groups[2].Value),0):null;}
+    static string Text(Dictionary<string,object> m,string k){object v;return m!=null&&m.TryGetValue(k,out v)&&v!=null?Convert.ToString(v):"";}
+    static bool Bool(Dictionary<string,object> m,string k){object v;return m!=null&&m.TryGetValue(k,out v)&&v!=null&&Convert.ToBoolean(v);}
+    static long Long(Dictionary<string,object> m,string k){long v;return Int64.TryParse(Text(m,k),out v)?v:0;}
+    static string LowerHash(string p){using(var sha=SHA256.Create())using(var f=File.OpenRead(p)){var b=sha.ComputeHash(f);var s=new StringBuilder();foreach(byte x in b)s.Append(x.ToString("x2"));return s.ToString();}}
     static bool IsWakfu(string p){return !String.IsNullOrWhiteSpace(p)&&File.Exists(Path.Combine(p,"contents","i18n","i18n_en.jar"));}
     static string FromSteam(string steam){
         if(IsWakfu(steam))return steam; string direct=Path.Combine(steam,"steamapps","common","Wakfu");if(IsWakfu(direct))return direct;
