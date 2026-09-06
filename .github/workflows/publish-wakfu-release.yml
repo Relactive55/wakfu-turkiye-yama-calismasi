@@ -133,14 +133,13 @@ jobs:
             --game-version "${{ needs.resolve-release-inputs.outputs.game_version }}" \
             --patch-version "${{ needs.resolve-release-inputs.outputs.patch_version }}" \
             --output-dir "${RELEASE_DIR}" | tee "${RUNNER_TEMP}/release-build.json"
-      - name: Enforce the three-asset release contract
+      - name: Enforce the two-asset release contract
         shell: bash
         run: |
           set -euo pipefail
           test -f "${RELEASE_DIR}/manifest.json"
           test -f "${RELEASE_DIR}/i18n.jar"
-          test -f "${RELEASE_DIR}/Wakfu-Turkce-Yama-Manuel.zip"
-          test "$(find "${RELEASE_DIR}" -maxdepth 1 -type f | wc -l)" -eq 3
+          test "$(find "${RELEASE_DIR}" -maxdepth 1 -type f | wc -l)" -eq 2
       - name: Refuse tag reuse (immutable releases)
         shell: bash
         run: |
@@ -159,7 +158,7 @@ jobs:
             exit 1
           fi
           echo "RELEASE_TAG=${tag}" >> "${GITHUB_ENV}"
-      - name: Publish the three verified assets
+      - name: Publish the two verified assets
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -170,7 +169,7 @@ jobs:
             title="WAKFU Turkish patch TEST ${RELEASE_TAG}"
             printf '%s\n\n%s\n' 'TEST / PRE-RELEASE ONLY' 'This fixture release is not a production WAKFU patch and must never be used by the stable updater.' > "${notes}"
             gh release create "${RELEASE_TAG}" \
-              "${RELEASE_DIR}/manifest.json" "${RELEASE_DIR}/i18n.jar" "${RELEASE_DIR}/Wakfu-Turkce-Yama-Manuel.zip" \
+              "${RELEASE_DIR}/manifest.json" "${RELEASE_DIR}/i18n.jar" \
               --repo "${GITHUB_REPOSITORY}" --target "${GITHUB_SHA}" \
               --title "${title}" --notes-file "${notes}" --prerelease
           else
@@ -182,7 +181,7 @@ jobs:
               printf '%s\n' 'İlk stable otomatik dağıtım sürümü.'
             } > "${notes}"
             gh release create "${RELEASE_TAG}" \
-              "${RELEASE_DIR}/manifest.json" "${RELEASE_DIR}/i18n.jar" "${RELEASE_DIR}/Wakfu-Turkce-Yama-Manuel.zip" \
+              "${RELEASE_DIR}/manifest.json" "${RELEASE_DIR}/i18n.jar" \
               --repo "${GITHUB_REPOSITORY}" --target "${GITHUB_SHA}" \
               --title "${title}" --notes-file "${notes}"
           fi
@@ -216,11 +215,11 @@ jobs:
           if view["tagName"] != tag:
               raise SystemExit("Release tag mismatch")
           assets = view["assets"]
-          if {item["name"] for item in assets} != {"manifest.json", "i18n.jar", "Wakfu-Turkce-Yama-Manuel.zip"} or len(assets) != 3:
+          if {item["name"] for item in assets} != {"manifest.json", "i18n.jar"} or len(assets) != 2:
               raise SystemExit("Release contains an unexpected asset set")
           subprocess.run([
               "gh", "release", "download", tag, "--repo", os.environ["GITHUB_REPOSITORY"],
-              "--dir", str(verify_dir), "--pattern", "manifest.json", "--pattern", "i18n.jar", "--pattern", "Wakfu-Turkce-Yama-Manuel.zip", "--clobber",
+              "--dir", str(verify_dir), "--pattern", "manifest.json", "--pattern", "i18n.jar", "--clobber",
           ], check=True)
           manifest = json.loads((verify_dir / "manifest.json").read_text())
           jar = verify_dir / "i18n.jar"
@@ -235,14 +234,6 @@ jobs:
           local_digest = hashlib.sha256((local_dir / "i18n.jar").read_bytes()).hexdigest()
           if digest != local_digest:
               raise SystemExit("downloaded asset differs from local build")
-          manual = verify_dir / "Wakfu-Turkce-Yama-Manuel.zip"
-          if not manual.is_file() or manual.stat().st_size <= 0:
-              raise SystemExit("manual ZIP is missing or empty")
-          import zipfile
-          with zipfile.ZipFile(manual) as archive:
-              required = {"contents/i18n/i18n.jar", "contents/i18n/i18n_en.jar", "KULLANIM.txt"}
-              if not required.issubset(set(archive.namelist())):
-                  raise SystemExit("manual ZIP contents are incomplete")
           print("RELEASE_ASSET_VERIFY_OK", view["url"])
           PY
       - name: Write release summary
@@ -254,7 +245,7 @@ jobs:
             echo "- tag: ${RELEASE_TAG}"
             echo "- game_version: ${{ needs.resolve-release-inputs.outputs.game_version }}"
             echo "- patch_version: ${{ needs.resolve-release-inputs.outputs.patch_version }}"
-            echo "- assets: manifest.json, i18n.jar, Wakfu-Turkce-Yama-Manuel.zip"
+            echo "- assets: manifest.json, i18n.jar"
             echo "- source: main @ ${GITHUB_SHA}"
             echo "- release creation: completed only after build/validation/hash verification"
           } >> "${GITHUB_STEP_SUMMARY}"
