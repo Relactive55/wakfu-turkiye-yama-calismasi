@@ -92,9 +92,16 @@ static class WakfuSetupApp {
         patched["i18n_en"]=hash;patched["i18n"]=hash;Directory.CreateDirectory(StateRoot);var serializer=new JavaScriptSerializer{MaxJsonLength=Int32.MaxValue};string temp=InstallStatePath+"."+Guid.NewGuid().ToString("N")+".tmp";File.WriteAllText(temp,serializer.Serialize(state),new UTF8Encoding(false));if(File.Exists(InstallStatePath))File.Replace(temp,InstallStatePath,null);else File.Move(temp,InstallStatePath);
     }
     static string VerifyReleaseBaseline(string game,PatchManifest manifest){
-        string backedUp=Path.Combine(BackupDir,"i18n_en.jar"),live=GameFiles(game)["i18n_en"],candidate=File.Exists(backedUp)?backedUp:live;
-        if(!File.Exists(candidate)||!String.Equals(HashFile(candidate),manifest.SourceI18nSha256,StringComparison.OrdinalIgnoreCase))throw new ReleaseUpdateException("Bu Release, seçilen WAKFU sürümünün temiz i18n_en.jar kaynağıyla uyumlu değil. Oyun güncellemesi için doğru yamayı bekleyin.");
-        return candidate;
+        string live=GameFiles(game)["i18n_en"];
+        var candidates=new List<string>();
+        var installed=ReadInstalledPatchState();
+        string releaseBackup=StateText(installed,"backup_dir");
+        if(!String.IsNullOrWhiteSpace(releaseBackup))candidates.Add(Path.Combine(releaseBackup,"i18n_en.jar"));
+        candidates.Add(Path.Combine(BackupDir,"i18n_en.jar"));
+        candidates.Add(live);
+        foreach(string candidate in candidates)
+            if(File.Exists(candidate)&&String.Equals(HashFile(candidate),manifest.SourceI18nSha256,StringComparison.OrdinalIgnoreCase))return candidate;
+        throw new ReleaseUpdateException("Bu Release, seçilen WAKFU sürümünün temiz i18n_en.jar kaynağıyla uyumlu değil. Oyun güncellemesi için doğru yamayı bekleyin.");
     }
     static string BackupReleaseTargets(Dictionary<string,string> live,PatchManifest manifest){
         string folder=Path.Combine(ReleaseBackupRoot,DateTime.Now.ToString("yyyyMMdd_HHmmss")+"_"+manifest.PatchVersion.Replace('.','_')+"_"+Guid.NewGuid().ToString("N").Substring(0,6));Directory.CreateDirectory(folder);
