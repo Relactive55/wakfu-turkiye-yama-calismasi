@@ -2,15 +2,15 @@
 
 ## Güncel Sürüm
 
-**WAKFU Türkçe Yama Kurulum Aracı 6.5.4**
+**WAKFU Türkçe Yama Kurulum Aracı 6.5.5**
 
-[WAKFU Türkçe Yama Kurulum EXE'sini indir](https://github.com/Relactive/wakfu-turkiye-yama-calismasi/releases/download/installer-6.5.4/Wakfu.Turkce.Yama.exe)
+[WAKFU Türkçe Yama Kurulum EXE'sini indir](https://github.com/Relactive/wakfu-turkiye-yama-calismasi/releases/download/installer-6.5.5/Wakfu.Turkce.Yama.exe)
 
 WAKFU'yu Türkçe oynamak için hazırlanan yama, kurulum aracı sayesinde kolayca kurulabilir.
 
 ### KURULUM
 
-1. **WAKFU Türkçe Yama Kurulum Aracı 6.5.4** sürümünü indirin.
+1. **WAKFU Türkçe Yama Kurulum Aracı 6.5.5** sürümünü indirin.
 2. WAKFU, Ankama Launcher ve Steam'i kapatın.
 3. Kurulum aracını çalıştırın.
 4. Kurulum aracında **WAKFU'nun kurulu olduğu ana oyun klasörünü** seçin.
@@ -32,7 +32,7 @@ Steam'i farklı bir diske veya Steam Kütüphanesine kurduysanız:
 
 ### SÜRÜM BİLGİLERİ
 
-- **Kurulum Aracı:** 6.5.4
+- **Kurulum Aracı:** 6.5.5
 - **Dosya Sürümü:** 6.5.0.0
 - **Kararlı Türkçe Yama:** tr-2026.09.05.5
 
@@ -57,6 +57,6 @@ Görevler, başarımlar, açıklamalar, arayüz metinleri ve diğer içerikler i
 
 ### İNDİRME
 
-**WAKFU Türkçe Yama Kurulum Aracı 6.5.4**
+**WAKFU Türkçe Yama Kurulum Aracı 6.5.5**
 
 Güncel sürümü projenin GitHub Releases sayfasından indirebilirsiniz.
