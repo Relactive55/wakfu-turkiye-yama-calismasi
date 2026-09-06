@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import json
 import subprocess
+import sys
 import tempfile
 import zipfile
 from pathlib import Path
@@ -66,6 +67,9 @@ def run(*, output_dir: Path, model_path: Path | None, model_lock: Path | None) -
     baseline = read_json(baseline_path, default=None)
     if not isinstance(baseline, dict):
         raise VerificationError("baseline snapshot is missing or invalid")
+    local_source = ROOT / "Oyun_Kaynaklari" / "Guncel" / "i18n_en.jar"
+    if not isinstance(state.get("source_sha1"), str) or sha1(local_source) != state["source_sha1"]:
+        raise VerificationError("BASELINE_MISMATCH: local approved source does not match automation state")
 
     client = AnkamaCdnClient()
     version = client.latest_version()
@@ -75,7 +79,7 @@ def run(*, output_dir: Path, model_path: Path | None, model_lock: Path | None) -
         client.download_localization(version, source)
         current = snapshot(source, version, entry.sha1)
         old_records = {key: value for key, value in baseline["records"].items()}
-        before = records_from_jar(ROOT / "Oyun_Kaynaklari" / "Guncel" / "i18n_en.jar")
+        before = records_from_jar(local_source)
         after = records_from_jar(source)
         delta = diff_records(before, after)
         counts = {kind: len(delta[kind]) for kind in ("UNCHANGED", "NEW", "MODIFIED", "REMOVED")}
@@ -113,6 +117,22 @@ def run(*, output_dir: Path, model_path: Path | None, model_lock: Path | None) -
         atomic_json_write(snapshot_path, current)
         atomic_json_write(STATE_PATH, {"schema": 1, "baseline": str(snapshot_path.relative_to(ROOT / "automation")).replace("\\", "/"), "game_version": version, "source_sha1": entry.sha1})
 
+        candidate_jar = output_dir / "candidate-i18n.jar"
+        subprocess.run([
+            sys.executable, str(ROOT / "Kaynak_Kodu" / "build_wakfu_jar.py"),
+            "--source-jar", str(source), "--output-jar", str(candidate_jar),
+            "--project", str(TRANSLATION_PATH), "--terminology", str(TERMS_PATH),
+            "--manual-repairs", str(MANUAL_PATH),
+        ], cwd=ROOT, check=True, capture_output=True, text=True)
+        audit = subprocess.run([
+            sys.executable, str(ROOT / "Kaynak_Kodu" / "wakfu_audit.py"),
+            "--source-jar", str(source), "--project", str(TRANSLATION_PATH),
+            "--terminology", str(TERMS_PATH), "--manual-repairs", str(MANUAL_PATH),
+            "--output-dir", str(ROOT / "Raporlar"), "--stage", "full",
+        ], cwd=ROOT, check=True, capture_output=True, text=True)
+        if "AUDIT|" not in audit.stdout or not audit.stdout.strip().endswith("|0"):
+            raise VerificationError("PRODUCTION_AUDIT_FAILED: " + audit.stdout[-500:])
+
         report = {
             "status": "PRODUCTION_CANDIDATE",
             "game_version": version,
@@ -121,6 +141,7 @@ def run(*, output_dir: Path, model_path: Path | None, model_lock: Path | None) -
             "translation_counts": {name: list(origins.values()).count(name) for name in ("manual", "memory", "glossary-key", "glossary-value", "argos")},
             "removed_report_only": True,
             "validation": "PASS",
+            "build": "PASS",
             "state_written_in_candidate_branch": True,
             "baseline": str(snapshot_path.relative_to(ROOT)).replace("\\", "/"),
         }
