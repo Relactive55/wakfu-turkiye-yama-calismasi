@@ -1,6 +1,9 @@
 name: Publish approved WAKFU Turkish patch
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       game_version:
@@ -27,10 +30,52 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  resolve-release-inputs:
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    outputs:
+      game_version: ${{ steps.resolve.outputs.game_version }}
+      patch_version: ${{ steps.resolve.outputs.patch_version }}
+      test_fixture: ${{ steps.resolve.outputs.test_fixture }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: main
+          fetch-depth: 1
+      - name: Resolve release version
+        id: resolve
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_GAME_VERSION: ${{ inputs.game_version }}
+          INPUT_PATCH_VERSION: ${{ inputs.patch_version }}
+          INPUT_TEST_FIXTURE: ${{ inputs.test_fixture }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
+            printf 'game_version=%s\n' "${INPUT_GAME_VERSION}" >> "${GITHUB_OUTPUT}"
+            printf 'patch_version=%s\n' "${INPUT_PATCH_VERSION}" >> "${GITHUB_OUTPUT}"
+            printf 'test_fixture=%s\n' "${INPUT_TEST_FIXTURE:-false}" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+          game_version=$(python -c 'import json; print(json.load(open("automation/state.json"))["game_version"])')
+          today=$(date -u +%Y.%m.%d)
+          latest=$(gh release list --repo "${GITHUB_REPOSITORY}" --limit 100 --json tagName --jq '.[].tagName' | sed -n 's/^tr-//p' | sort -V | tail -n 1)
+          revision=1
+          if [[ "${latest}" == "${today}."* ]]; then
+            revision=$(( ${latest##*.} + 1 ))
+          fi
+          printf 'game_version=%s\n' "${game_version}" >> "${GITHUB_OUTPUT}"
+          printf 'patch_version=%s\n' "${today}.${revision}" >> "${GITHUB_OUTPUT}"
+          printf 'test_fixture=false\n' >> "${GITHUB_OUTPUT}"
+
   package-and-release:
     # A manual dispatch from a PR/topic branch must never publish.  The
     # release Environment below still requires its configured reviewers.
-    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    needs: resolve-release-inputs
+    if: needs.resolve-release-inputs.result == 'success'
     permissions:
       contents: write
     environment: release
@@ -57,7 +102,7 @@ jobs:
           test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
           test "$(git symbolic-ref --short HEAD)" = "main"
       - name: Build isolated prerelease fixture
-        if: inputs.test_fixture == true
+        if: needs.resolve-release-inputs.outputs.test_fixture == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -65,17 +110,17 @@ jobs:
           python -m automation.release_pipeline \
             --test-fixture \
             --output-dir "${RELEASE_DIR}" \
-            --game-version "${{ inputs.game_version }}" \
-            --patch-version "${{ inputs.patch_version }}" | tee "${RUNNER_TEMP}/release-build.json"
+            --game-version "${{ needs.resolve-release-inputs.outputs.game_version }}" \
+            --patch-version "${{ needs.resolve-release-inputs.outputs.patch_version }}" | tee "${RUNNER_TEMP}/release-build.json"
       - name: Build approved production package from main
-        if: inputs.test_fixture != true
+        if: needs.resolve-release-inputs.outputs.test_fixture != 'true'
         shell: bash
         run: |
           set -euo pipefail
           rm -rf "${RELEASE_DIR}"
           python -m automation.build_approved_release \
-            --game-version "${{ inputs.game_version }}" \
-            --patch-version "${{ inputs.patch_version }}" \
+            --game-version "${{ needs.resolve-release-inputs.outputs.game_version }}" \
+            --patch-version "${{ needs.resolve-release-inputs.outputs.patch_version }}" \
             --output-dir "${RELEASE_DIR}" | tee "${RUNNER_TEMP}/release-build.json"
       - name: Enforce the two-asset release contract
         shell: bash
@@ -88,10 +133,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if [ "${{ inputs.test_fixture }}" = "true" ]; then
-            tag="tr-test-${{ inputs.patch_version }}"
+          if [ "${{ needs.resolve-release-inputs.outputs.test_fixture }}" = "true" ]; then
+            tag="tr-test-${{ needs.resolve-release-inputs.outputs.patch_version }}"
           else
-            tag="tr-${{ inputs.patch_version }}"
+            tag="tr-${{ needs.resolve-release-inputs.outputs.patch_version }}"
           fi
           if gh release view "${tag}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
             echo "Release/tag already exists: ${tag}" >&2
@@ -109,7 +154,7 @@ jobs:
         run: |
           set -euo pipefail
           notes="${RUNNER_TEMP}/release-notes.md"
-          if [ "${{ inputs.test_fixture }}" = "true" ]; then
+          if [ "${{ needs.resolve-release-inputs.outputs.test_fixture }}" = "true" ]; then
             title="WAKFU Turkish patch TEST ${RELEASE_TAG}"
             printf '%s\n\n%s\n' 'TEST / PRE-RELEASE ONLY' 'This fixture release is not a production WAKFU patch and must never be used by the stable updater.' > "${notes}"
             gh release create "${RELEASE_TAG}" \
@@ -121,7 +166,7 @@ jobs:
             {
               printf '%s\n' 'WAKFU Türkçe Yama'
               printf 'Patch: %s\n' "${RELEASE_TAG#tr-}"
-              printf 'Uyumlu WAKFU: %s\n\n' '${{ inputs.game_version }}'
+              printf 'Uyumlu WAKFU: %s\n\n' '${{ needs.resolve-release-inputs.outputs.game_version }}'
               printf '%s\n' 'İlk stable otomatik dağıtım sürümü.'
             } > "${notes}"
             gh release create "${RELEASE_TAG}" \
@@ -138,7 +183,7 @@ jobs:
           rm -rf "${VERIFY_DIR}"
           mkdir -p "${VERIFY_DIR}"
           gh release view "${RELEASE_TAG}" --repo "${GITHUB_REPOSITORY}" --json isDraft,isPrerelease,tagName,assets,url > "${RUNNER_TEMP}/release-view.json"
-          python - "${RUNNER_TEMP}/release-view.json" "${RELEASE_DIR}" "${VERIFY_DIR}" "${{ inputs.test_fixture }}" "${RELEASE_TAG}" <<'PY'
+          python - "${RUNNER_TEMP}/release-view.json" "${RELEASE_DIR}" "${VERIFY_DIR}" "${{ needs.resolve-release-inputs.outputs.test_fixture }}" "${RELEASE_TAG}" <<'PY'
           import hashlib
           import json
           import os
@@ -185,10 +230,10 @@ jobs:
         run: |
           {
             echo "### Release pipeline PASS"
-            echo "- mode: ${{ inputs.test_fixture == true && 'TEST / PRE-RELEASE' || 'STABLE (manual approval required)' }}"
+            echo "- mode: ${{ needs.resolve-release-inputs.outputs.test_fixture == 'true' && 'TEST / PRE-RELEASE' || 'STABLE (approval required)' }}"
             echo "- tag: ${RELEASE_TAG}"
-            echo "- game_version: ${{ inputs.game_version }}"
-            echo "- patch_version: ${{ inputs.patch_version }}"
+            echo "- game_version: ${{ needs.resolve-release-inputs.outputs.game_version }}"
+            echo "- patch_version: ${{ needs.resolve-release-inputs.outputs.patch_version }}"
             echo "- assets: manifest.json, i18n.jar"
             echo "- source: main @ ${GITHUB_SHA}"
             echo "- release creation: completed only after build/validation/hash verification"
