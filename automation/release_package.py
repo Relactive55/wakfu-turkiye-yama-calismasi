@@ -1,4 +1,4 @@
-"""Build the two immutable GitHub Release assets from a validated patch.
+"""Build the validated GitHub Release assets from a validated patch.
 
 This module never publishes a Release.  The workflow is responsible for the
 human-approved publishing boundary; this code only produces deterministic,
@@ -47,6 +47,33 @@ def verify_i18n_jar(path: Path) -> None:
         raise ValueError("i18n JAR lacks required entries: " + ", ".join(missing))
 
 
+def build_manual_zip(*, patch_jar: Path, output_dir: Path) -> Path:
+    """Create the deterministic manual-install archive used by README users."""
+    verify_i18n_jar(patch_jar)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    final = output_dir / "Wakfu-Turkce-Yama-Manuel.zip"
+    usage = (
+        "KULLANIM - WAKFU TÜRKÇE YAMA\n\n"
+        "1. WAKFU, Steam ve Ankama Launcher'i kapatın.\n"
+        "2. Bu ZIP dosyasını doğrudan WAKFU ana klasörüne çıkartın.\n"
+        "3. Dosyaların contents\\i18n klasörüne yerleştiğini kontrol edin.\n"
+        "4. WAKFU'yu normal şekilde başlatın.\n\n"
+        "Yanlış klasöre çıkartmayın. Oyun güncellendiğinde güncel ZIP paketini kullanın.\n"
+    ).encode("utf-8")
+    with zipfile.ZipFile(final, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
+        def add_bytes(name: str, data: bytes) -> None:
+            info = zipfile.ZipInfo(name, (2026, 1, 1, 0, 0, 0))
+            info.compress_type = zipfile.ZIP_DEFLATED
+            info.external_attr = 0o644 << 16
+            archive.writestr(info, data)
+
+        jar = patch_jar.read_bytes()
+        add_bytes("contents/i18n/i18n.jar", jar)
+        add_bytes("contents/i18n/i18n_en.jar", jar)
+        add_bytes("KULLANIM.txt", usage)
+    return final
+
+
 def build_release_assets(*, patch_jar: Path, source_jar: Path, game_version: str, patch_version: str, output_dir: Path) -> dict[str, object]:
     if not GAME_VERSION.fullmatch(game_version):
         raise ValueError("game_version must be numeric dot-separated version text")
@@ -72,6 +99,7 @@ def build_release_assets(*, patch_jar: Path, source_jar: Path, game_version: str
         "source_i18n_sha256": sha256(source_jar),
     }
     atomic_json_write(output_dir / "manifest.json", manifest)
+    build_manual_zip(patch_jar=final, output_dir=output_dir)
     return manifest
 
 
