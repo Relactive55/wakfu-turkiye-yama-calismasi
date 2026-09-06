@@ -4,6 +4,7 @@ name: WAKFU current-version merge gate
 # secrets and has read-only permissions, so untrusted PR code cannot write to
 # the repository or approve itself.
 on:
+  workflow_dispatch:
   pull_request:
     branches: [main]
     types: [opened, synchronize, reopened]
