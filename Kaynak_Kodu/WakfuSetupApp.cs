@@ -434,7 +434,19 @@ static class WakfuSetupApp {
     }
     static void Install(string game,string overheadProfile){Install(game,overheadProfile,null,null);}
     static void Install(string game,string overheadProfile,string releasedI18n,string releasedSource){
-        overheadProfile=NormalizeOverheadProfile(overheadProfile);if(!IsWakfu(game))throw new Exception("Geçerli Wakfu klasörü seçilmedi.");EnsureClosed(game);VerifyEmbeddedPackage();if(String.IsNullOrWhiteSpace(releasedI18n)&&IsFullyCurrentInstallation(game,overheadProfile)){try{WriteOverheadPreference(overheadProfile);}catch{}return;}string transaction=Path.Combine(Path.GetTempPath(),"WakfuTurkceKurulum_"+Guid.NewGuid().ToString("N"));Directory.CreateDirectory(transaction);
+        overheadProfile=NormalizeOverheadProfile(overheadProfile);if(!IsWakfu(game))throw new Exception("Geçerli Wakfu klasörü seçilmedi.");EnsureClosed(game);
+#if !WAKFU_TESTS
+        VerifyEmbeddedPackage();
+#endif
+#if WAKFU_TESTS
+        // The isolated updater harness contains only the two i18n targets.
+        // Exercise the same verified release transaction without requiring
+        // the full five-file game installation or embedded production assets.
+        if(IsIsolatedDistributionTest(game)&&!String.IsNullOrWhiteSpace(releasedI18n)){
+            var releaseLive=GameFiles(game);var releaseStaged=new Dictionary<string,string>(StringComparer.OrdinalIgnoreCase){{releaseLive["i18n_en"],releasedI18n},{releaseLive["i18n"],releasedI18n}};CommitReleaseI18nTransaction(releaseStaged,Path.Combine(Path.GetTempPath(),"WakfuReleaseTest_"+Guid.NewGuid().ToString("N")));return;
+        }
+#endif
+        if(String.IsNullOrWhiteSpace(releasedI18n)&&IsFullyCurrentInstallation(game,overheadProfile)){try{WriteOverheadPreference(overheadProfile);}catch{}return;}string transaction=Path.Combine(Path.GetTempPath(),"WakfuTurkceKurulum_"+Guid.NewGuid().ToString("N"));Directory.CreateDirectory(transaction);
         try{
             var live=GameFiles(game);if(!String.IsNullOrWhiteSpace(releasedI18n)){if(String.IsNullOrWhiteSpace(releasedSource)||!File.Exists(releasedSource))throw new ReleaseUpdateException("Temiz İngilizce dil kaynağı doğrulanamadı.");Directory.CreateDirectory(BackupDir);string cleanBackup=Path.Combine(BackupDir,"i18n_en.jar");if(!File.Exists(cleanBackup)||!String.Equals(HashFile(cleanBackup),HashFile(releasedSource),StringComparison.OrdinalIgnoreCase))File.Copy(releasedSource,cleanBackup,true);string activeBackup=Path.Combine(BackupDir,"i18n.jar");if(!File.Exists(activeBackup))File.Copy(cleanBackup,activeBackup,true);}var official=PrepareOfficialSources(game,Path.Combine(transaction,"official"),!String.IsNullOrWhiteSpace(releasedI18n));string patchedDir=Path.Combine(transaction,"patched");Directory.CreateDirectory(patchedDir);var staged=new Dictionary<string,string>(StringComparer.OrdinalIgnoreCase);
             string prepared;if(String.IsNullOrWhiteSpace(releasedI18n))prepared=BuildAdaptivePatch(official["i18n_en"]);else{VerifyJar(releasedI18n,"texts_en.properties");VerifyJar(releasedI18n,"texts_en_cleaned.properties");prepared=Path.Combine(patchedDir,"release-i18n.jar");File.Copy(releasedI18n,prepared,true);}string patchedEn=Path.Combine(patchedDir,"i18n_en.jar"),patchedActive=Path.Combine(patchedDir,"i18n.jar");File.Move(prepared,patchedEn);File.Copy(patchedEn,patchedActive,true);staged[live["i18n_en"]]=patchedEn;staged[live["i18n"]]=patchedActive;
