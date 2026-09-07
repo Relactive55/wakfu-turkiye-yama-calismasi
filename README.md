@@ -4,7 +4,7 @@
 
 **WAKFU Türkçe Yama Kurulum Aracı 6.5.11**
 
-[WAKFU Türkçe Yama Kurulum EXE'sini indir](https://github.com/Relactive/wakfu-turkiye-yama-calismasi/releases/download/installer-6.5.11/Wakfu.Turkce.Yama.6.5.11.exe)
+[WAKFU Türkçe Yama Kurulum EXE'sini indir](https://github.com/Relactive55/wakfu-turkiye-yama-calismasi/releases/download/installer-6.5.11/Wakfu.Turkce.Yama.6.5.11.exe)
 
 WAKFU'yu Türkçe oynamak için hazırlanan yama, kurulum aracı sayesinde kolayca kurulabilir.
 

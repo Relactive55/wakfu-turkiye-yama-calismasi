@@ -16,7 +16,7 @@ from automation.pr_guard import (
 )
 
 
-REPOSITORY = "Relactive/wakfu-turkiye-yama-calismasi"
+REPOSITORY = "Relactive55/wakfu-turkiye-yama-calismasi"
 SHA_A = "a" * 40
 SHA_B = "b" * 40
 SHA_C = "c" * 40

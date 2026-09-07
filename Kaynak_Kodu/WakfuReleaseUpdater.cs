@@ -61,7 +61,7 @@ internal sealed class ReleaseHttpResponse {
 }
 
 internal static class WakfuReleaseUpdater {
-    internal const string Owner = "Relactive";
+    internal const string Owner = "Relactive55";
     internal const string Repository = "wakfu-turkiye-yama-calismasi";
     internal const string RepositorySlug = Owner + "/" + Repository;
     internal const string ApiBase = "https://api.github.com/repos/" + RepositorySlug;
