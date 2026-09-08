@@ -41,6 +41,12 @@ TRANSLATABLE_INVENTORY_UI_KEYS = {
     "content.15.24267",
     "content.15.27097", "content.15.27098", "content.15.27099",
     "content.15.27110", "content.15.29612",
+    # Oyuncuya kitap başlığı/nadirlik etiketi olarak gösterilen genel adlar.
+    "content.15.18628", "content.15.18629", "content.15.18630",
+    "content.15.19056", "content.15.20020", "content.15.20021",
+    "content.15.22385", "content.15.24027", "content.15.24081",
+    "content.15.24845", "content.15.24846", "content.15.25103",
+    "content.15.32542", "content.15.32543",
 }
 
 EXTRA_PROTECTED_COMBAT_NAME_KEYS = {

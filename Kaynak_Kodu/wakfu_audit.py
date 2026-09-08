@@ -404,6 +404,22 @@ REVIEWED_TRANSLATABLE_NAME_KEYS = {
     "content.15.27110",  # Healing Mastery
     "content.15.29612",  # Search
     "content.15.31167",  # Celestial Bag (envanter depo başlığı)
+    # Kitap başlıkları ve nadirlikte görünen genel etiketler oyuncuya Türkçe
+    # gösterilir; özel kişi, yaratık ve ekipman adları bu listenin dışındadır.
+    "content.15.18628",  # Dragoturkey Stories
+    "content.15.18629",  # How to Cook your Dragoturkey
+    "content.15.18630",  # Harnessing and Saddling
+    "content.15.19056",  # Souvenir
+    "content.15.20020",  # Spherolithic Encyclopedia
+    "content.15.20021",  # Abacus Compendium
+    "content.15.22385",  # Souvenir
+    "content.15.24027",  # Dathura Souvenir
+    "content.15.24081",  # Dathura Souvenir
+    "content.15.24845",  # Iopunchup Battlefield Rules
+    "content.15.24846",  # Enipsia Battlefield Rules
+    "content.15.25103",  # Battlefield Rules: Free-for-All
+    "content.15.32542",  # Ancestral Souvenir
+    "content.15.32543",  # Ancestral Souvenir
     "content.38.5",      # Summons (creature family label)
     "content.38.518",    # Guild of Hunters
     "content.61.517",    # Guild of Hunters
@@ -425,6 +441,22 @@ REVIEWED_TRANSLATABLE_NAME_KEYS = {
     "content.8.5355",  # Territory Control Bonus
     "content.8.1915",  # Area bonus (general region bonus title)
     "content.8.1916",  # Area bonus (general region bonus title)
+}
+
+# Aynı kitap/nadirlik metni yeni bir content.15 anahtarıyla tekrar gelirse,
+# anahtarın önceden listelenmesini beklemeden güvenli biçimde çevrilebilsin.
+TRANSLATABLE_GENERIC_NAME_VALUES = {
+    "Dragoturkey Stories": "Dragoturkey Hikâyeleri",
+    "How to Cook your Dragoturkey": "Dragoturkey Nasıl Pişirilir?",
+    "Harnessing and Saddling": "Koşum Takımı ve Eyerleme",
+    "Souvenir": "Hatıra",
+    "Spherolithic Encyclopedia": "Sferolitik Ansiklopedi",
+    "Abacus Compendium": "Abakus Derlemesi",
+    "Dathura Souvenir": "Dathura Hatırası",
+    "Iopunchup Battlefield Rules": "Iopunchup Savaş Alanı Kuralları",
+    "Enipsia Battlefield Rules": "Enipsia Savaş Alanı Kuralları",
+    "Battlefield Rules: Free-for-All": "Savaş Alanı Kuralları: Herkes Tek Başına",
+    "Ancestral Souvenir": "Atasal Hatıra",
 }
 REVIEWED_PROTECTED_KEYS = {
     # Etki/durum ailelerinde bulunmalarına rağmen bunlar oyuncuya gösterilen
@@ -616,8 +648,11 @@ def is_reviewed_haven_translation(source, target):
 
 
 def is_translatable_inventory_name(key, source):
-    """Only explicitly reviewed generic inventory labels may be translated."""
-    return key.startswith("content.15.") and key in REVIEWED_TRANSLATABLE_NAME_KEYS
+    """Only reviewed generic inventory/book labels may be translated."""
+    return key.startswith("content.15.") and (
+        key in REVIEWED_TRANSLATABLE_NAME_KEYS
+        or source.strip() in TRANSLATABLE_GENERIC_NAME_VALUES
+    )
 
 
 def load_json(path, default):
