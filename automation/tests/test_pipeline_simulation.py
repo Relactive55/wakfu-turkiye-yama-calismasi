@@ -1,8 +1,17 @@
 from __future__ import annotations
-import tempfile, unittest, zipfile
+import json
+import shutil
+import tempfile
+import unittest
+import zipfile
 from pathlib import Path
-from automation.localization_pipeline import diff_records, records_from_jar, resolve_changes, validate_proposals
+from types import SimpleNamespace
+from unittest.mock import patch
+from automation.localization_pipeline import Record, diff_records, records_from_jar, resolve_changes, validate_proposals
 from automation.errors import TranslationProviderUnavailable, VerificationError
+import automation.production_pr_update as production_pr_update
+from automation.production_pr_update import build_provider_unavailable_report
+from automation.update_wakfu_localization import sha1, snapshot
 
 def make_jar(path: Path, main: str, clean: str) -> None:
     with zipfile.ZipFile(path, "w") as z:
@@ -38,3 +47,75 @@ class PipelineSimulation(unittest.TestCase):
             )
             self.assertEqual(no_changes, {})
             self.assertEqual(no_change_origins, {})
+
+    def test_provider_unavailable_report_is_fail_closed_and_sanitized(self) -> None:
+        unresolved = [Record("texts_en.properties:new.secret#1", "texts_en.properties", "new.secret", 1, "do not copy this")]
+        report = build_provider_unavailable_report(
+            game_version="6.5.12",
+            source_sha1="abc123",
+            diff={"UNCHANGED": 10, "NEW": 1, "MODIFIED": 2, "REMOVED": 0},
+            unresolved=unresolved,
+            reason_code="ARGOS_RUNTIME_OR_MODEL_UNAVAILABLE",
+        )
+        self.assertEqual(report["status"], "PROVIDER_UNAVAILABLE")
+        self.assertEqual(report["unresolved_count"], 1)
+        self.assertEqual(report["unresolved_keys"], ["texts_en.properties:new.secret#1"])
+        self.assertFalse(report["state_written_in_candidate_branch"])
+        self.assertFalse(report["translation_memory_changed"])
+        self.assertFalse(report["release_created"])
+        self.assertNotIn("do not copy this", str(report))
+
+    def test_production_update_provider_stop_does_not_write_state(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "automation" / "snapshots").mkdir(parents=True)
+            (root / "Oyun_Kaynaklari" / "Guncel").mkdir(parents=True)
+            (root / "Ceviri_Verileri").mkdir(parents=True)
+            before = root / "Oyun_Kaynaklari" / "Guncel" / "i18n_en.jar"
+            after = root / "after.jar"
+            make_jar(before, "same=Same\n", "clean=Clean\n")
+            make_jar(after, "same=Same\nnew=Unresolved\n", "clean=Clean\n")
+            state_path = root / "automation" / "state.json"
+            baseline_path = root / "automation" / "snapshots" / "baseline.json"
+            state_path.write_text(
+                json.dumps({"schema": 1, "baseline": "snapshots/baseline.json", "source_sha1": sha1(before)}),
+                encoding="utf-8",
+            )
+            baseline_path.write_text(json.dumps(snapshot(before, "old", "before-manifest")), encoding="utf-8")
+            translation_path = root / "Ceviri_Verileri" / "wakfu_tr_ceviri.json"
+            manual_path = root / "Ceviri_Verileri" / "manual_repairs_v23.json"
+            terms_path = root / "Ceviri_Verileri" / "terim_duzeltmeleri.json"
+            translation_path.write_text(json.dumps({"same": "Aynı"}), encoding="utf-8")
+            manual_path.write_text("{}", encoding="utf-8")
+            terms_path.write_text(json.dumps({"keys": {}, "values": {}, "phrases": {}}), encoding="utf-8")
+            state_before = state_path.read_bytes()
+            translation_before = translation_path.read_bytes()
+
+            class FakeClient:
+                def latest_version(self):
+                    return "new"
+
+                def target_entry(self, _version):
+                    return SimpleNamespace(sha1="after-manifest"), None
+
+                def download_localization(self, _version, destination):
+                    shutil.copyfile(after, destination)
+
+            with patch.object(production_pr_update, "ROOT", root), \
+                patch.object(production_pr_update, "STATE_PATH", state_path), \
+                patch.object(production_pr_update, "TRANSLATION_PATH", translation_path), \
+                patch.object(production_pr_update, "MANUAL_PATH", manual_path), \
+                patch.object(production_pr_update, "TERMS_PATH", terms_path), \
+                patch.object(production_pr_update, "AnkamaCdnClient", FakeClient):
+                report = production_pr_update.run(
+                    output_dir=root / "output",
+                    model_path=None,
+                    model_lock=None,
+                    allow_provider_unavailable=True,
+                )
+
+            self.assertEqual(report["status"], "PROVIDER_UNAVAILABLE")
+            self.assertEqual(state_path.read_bytes(), state_before)
+            self.assertEqual(translation_path.read_bytes(), translation_before)
+            self.assertFalse((root / "automation" / "snapshots" / "new.json").exists())
+            self.assertTrue((root / "output" / "production_update_report.json").is_file())

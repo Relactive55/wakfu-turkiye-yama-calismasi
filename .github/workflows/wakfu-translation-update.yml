@@ -169,9 +169,12 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+      issues: write
     env:
       ARGOS_DEVICE_TYPE: cpu
       ARGOS_DEVICE_COUNT: '1'
+      ARGOS_VENV: ${{ runner.temp }}/argos-venv
+      ARGOS_MODEL: ${{ runner.temp }}/translate-en_tr-1_5.argosmodel
       GAME_VERSION: ${{ needs.inspect-upstream.outputs.game_version }}
       SOURCE_SHA1: ${{ needs.inspect-upstream.outputs.source_sha1 }}
       GH_TOKEN: ${{ github.token }}
@@ -184,19 +187,22 @@ jobs:
         with:
           python-version: '3.11'
       - name: Create isolated translation runtime
-        run: python -m venv "$RUNNER_TEMP/argos-venv"
+        continue-on-error: true
+        run: python -m venv "$ARGOS_VENV"
       - name: Install exact translation runtime
-        run: "$RUNNER_TEMP/argos-venv/bin/python -m pip install --disable-pip-version-check -r requirements-translation.txt"
+        continue-on-error: true
+        run: "$ARGOS_VENV/bin/python -m pip install --disable-pip-version-check -r requirements-translation.txt"
       - name: Download and verify locked Argos model from GitHub Release
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          target="$RUNNER_TEMP/translate-en_tr-1_5.argosmodel"
+          target="$ARGOS_MODEL"
           release_json="$RUNNER_TEMP/argos-release.json"
           gh release view runtime-argos-1.5 --repo "$GITHUB_REPOSITORY" \
             --json isDraft,isPrerelease,tagName,assets > "$release_json"
-          "$RUNNER_TEMP/argos-venv/bin/python" - "$release_json" <<'PY'
+          "$ARGOS_VENV/bin/python" - "$release_json" <<'PY'
           import json
           import pathlib
           import sys
@@ -216,10 +222,10 @@ jobs:
           if expected_asset not in {item.get("name") for item in release.get("assets", [])}:
               raise SystemExit("Argos model asset is missing from the expected GitHub Release")
           PY
-          "$RUNNER_TEMP/argos-venv/bin/python" -c 'import pathlib,sys; p=pathlib.Path(sys.argv[1]); p.unlink(missing_ok=True)' "$target"
+          "$ARGOS_VENV/bin/python" -c 'import pathlib,sys; p=pathlib.Path(sys.argv[1]); p.unlink(missing_ok=True)' "$target"
           gh release download runtime-argos-1.5 --repo "$GITHUB_REPOSITORY" \
             --pattern 'wakfu-translate-en_tr-1_5.argosmodel' --output "$target" --clobber
-          "$RUNNER_TEMP/argos-venv/bin/python" - "$target" <<'PY'
+          "$ARGOS_VENV/bin/python" - "$target" <<'PY'
           import hashlib, json, pathlib, sys
           lock = json.loads(pathlib.Path("automation/model-lock.json").read_text(encoding="utf-8"))
           target = pathlib.Path(sys.argv[1])
@@ -228,22 +234,48 @@ jobs:
               raise SystemExit("ARGOS_MODEL_VERIFICATION_FAILED")
           print(f"ARGOS_MODEL_OK|{target.stat().st_size}|{digest}")
           PY
+      - name: Determine Argos availability
+        id: argos-status
+        if: always()
+        run: |
+          set -euo pipefail
+          if [ -x "$ARGOS_VENV/bin/python" ] \
+            && [ -s "$ARGOS_MODEL" ] \
+            && "$ARGOS_VENV/bin/python" -c 'import argostranslate' >/dev/null 2>&1; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+            echo "ARGOS_READY=true" >> "$GITHUB_ENV"
+            echo "ARGOS_READY|true"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "ARGOS_READY=false" >> "$GITHUB_ENV"
+            echo "ARGOS_READY|false"
+          fi
       - name: Build and validate production candidate
         run: |
           set -euo pipefail
-          export XDG_CONFIG_HOME="$RUNNER_TEMP/argos-config"
-          export XDG_DATA_HOME="$RUNNER_TEMP/argos-data"
-          export XDG_CACHE_HOME="$RUNNER_TEMP/argos-cache"
-          "$RUNNER_TEMP/argos-venv/bin/python" -m automation.production_pr_update \
+          python_bin=python
+          model_args=()
+          if [ "${ARGOS_READY:-false}" = "true" ]; then
+            python_bin="$ARGOS_VENV/bin/python"
+            model_args=(--model-path "$ARGOS_MODEL" --model-lock automation/model-lock.json)
+            export XDG_CONFIG_HOME="$RUNNER_TEMP/argos-config"
+            export XDG_DATA_HOME="$RUNNER_TEMP/argos-data"
+            export XDG_CACHE_HOME="$RUNNER_TEMP/argos-cache"
+          fi
+          "$python_bin" -m automation.production_pr_update \
             --output-dir "$RUNNER_TEMP/production-pr-output" \
-            --model-path "$RUNNER_TEMP/translate-en_tr-1_5.argosmodel" \
-            --model-lock automation/model-lock.json | tee "$RUNNER_TEMP/production-update.json"
+            --allow-provider-unavailable \
+            "${model_args[@]}" | tee "$RUNNER_TEMP/production-update.json"
       - name: Commit candidate and open production PR
         run: |
           set -euo pipefail
           report="$RUNNER_TEMP/production-pr-output/production_update_report.json"
           test -f "$report"
           status=$(python -c 'import json,sys; print(json.load(open(sys.argv[1]))["status"])' "$report")
+          if [ "$status" = "PROVIDER_UNAVAILABLE" ]; then
+            echo "ARGOS_PROVIDER_UNAVAILABLE_NO_STATE_CHANGE"
+            exit 0
+          fi
           test "$status" = "PRODUCTION_CANDIDATE"
           branch="codex/wakfu-localization-${GAME_VERSION//[^A-Za-z0-9.-]/-}-${SOURCE_SHA1:0:8}"
           if gh pr list --repo "$GITHUB_REPOSITORY" --state open --head "$branch" --json number --jq 'length' | grep -qv '^0$'; then
@@ -281,6 +313,66 @@ jobs:
           gh pr create --repo "$GITHUB_REPOSITORY" --base main --head "$branch" \
             --title "WAKFU localization update: ${GAME_VERSION}" \
             --body-file "$RUNNER_TEMP/production-pr-body.md"
+      - name: Record provider-unavailable status
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          report="$RUNNER_TEMP/production-pr-output/production_update_report.json"
+          if [ ! -f "$report" ]; then
+            echo "No provider status report was produced."
+            exit 0
+          fi
+          python - "$report" <<'PY'
+          import json
+          import os
+          import subprocess
+          import sys
+
+          report = json.load(open(sys.argv[1], encoding="utf-8"))
+          if report.get("status") != "PROVIDER_UNAVAILABLE":
+              print("ARGOS_PROVIDER_AVAILABLE_OR_UNEXPECTED_FAILURE")
+              raise SystemExit(0)
+
+          repository = os.environ["GITHUB_REPOSITORY"]
+          title = "[ACTION REQUIRED] WAKFU translation provider unavailable"
+          raw = subprocess.check_output(
+              ["gh", "api", f"repos/{repository}/issues?state=open&per_page=100"],
+              text=True,
+          )
+          issues = json.loads(raw)
+          if any(isinstance(item, dict) and item.get("title") == title for item in issues):
+              print("ARGOS_PROVIDER_WAITING_ISSUE_ALREADY_OPEN")
+              raise SystemExit(0)
+
+          diff = report.get("diff", {})
+          body = """## Otomatik çeviri sağlayıcısı beklemede
+
+          Argos çalışma ortamı veya hash-kilitli model doğrulanamadığı için bu çalışmada çeviri belleği, proje durumu, dal, PR veya Release yazılmadı.
+
+          Onaylı çeviri belleği ve sözlük korunuyor. Yeni veya değişen satırlar güvenilir yerel GPU aracıyla ya da manuel incelemeyle onaylandıktan sonra sonraki otomatik döngüye alınacaktır.
+
+          - Oyun sürümü: `{version}`
+          - Yeni: `{new}`
+          - Değişen: `{modified}`
+          - Kaldırılan (yalnızca rapor): `{removed}`
+          - Çözülemeyen: `{unresolved}`
+          - Neden kodu: `{reason}`
+          """.format(
+              version=report.get("game_version", "unknown"),
+              new=diff.get("NEW", 0),
+              modified=diff.get("MODIFIED", 0),
+              removed=diff.get("REMOVED", 0),
+              unresolved=report.get("unresolved_count", 0),
+              reason=report.get("reason_code", "ARGOS_UNAVAILABLE"),
+          )
+          subprocess.run(
+              ["gh", "issue", "create", "--repo", repository, "--title", title, "--body", body],
+              check=True,
+          )
+          print("ARGOS_PROVIDER_WAITING_ISSUE_CREATED")
+          PY
 
   create-test-pr:
     if: github.event_name == 'workflow_dispatch' && inputs.test_fixture == true && needs.inspect-upstream.result == 'success'

@@ -64,3 +64,9 @@ Güncel sürümü projenin GitHub Releases sayfasından indirebilirsiniz.
 ### GÜVENLİ DAĞITIM
 
 Kurulum EXE'si, Türkçe yama paketleri ve doğrulama dosyaları yalnızca bu projenin GitHub Releases varlıkları olarak yayımlanır. Harici dosya barındırıcıları, kısaltılmış bağlantılar ve yönlendirme servisleri kullanılmaz.
+
+### ÇEVİRİ SAĞLAYICISI YEDEK AKIŞI
+
+Otomatik çeviride öncelik sırası korunur: manuel düzeltmeler, onaylı çeviri belleği, sözlük ve en son Argos. Argos çalışma ortamı veya hash kilitli modeli kullanılamazsa yeni ya da değişen satırlar otomatik olarak İngilizce bırakılıp yayımlanmaz. İş akışı mevcut bellek ve sözlükleri değiştirmeden bekleyen bir durum bildirimi açar; böylece hatalı çeviri, dal, PR veya Release oluşmaz.
+
+Bu satırlar mevcut yerel GPU çeviri aracıyla (NVIDIA OPUS+Qwen) veya manuel olarak gözden geçirilip onaylı çeviri belleğine aktarıldığında, sonraki otomatik çalışma aynı yapıyı bozmadan kaldığı yerden devam eder.
