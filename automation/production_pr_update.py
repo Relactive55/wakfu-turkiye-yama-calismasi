@@ -114,14 +114,30 @@ def run(
     baseline = read_json(baseline_path, default=None)
     if not isinstance(baseline, dict):
         raise VerificationError("baseline snapshot is missing or invalid")
-    local_source = ROOT / "Oyun_Kaynaklari" / "Guncel" / "i18n_en.jar"
-    if not isinstance(state.get("source_sha1"), str) or sha1(local_source) != state["source_sha1"]:
-        raise VerificationError("BASELINE_MISMATCH: local approved source does not match automation state")
-
     client = AnkamaCdnClient()
-    version = client.latest_version()
-    entry, _ = client.target_entry(version)
+    approved_version = state.get("game_version")
+    approved_sha1 = state.get("source_sha1")
+    if not isinstance(approved_version, str) or not approved_version:
+        raise VerificationError("BASELINE_REQUIRED: approved game version is missing")
+    if not isinstance(approved_sha1, str) or not approved_sha1:
+        raise VerificationError("BASELINE_REQUIRED: approved source SHA-1 is missing")
+    if baseline.get("game_version") != approved_version or baseline.get("source_sha1") != approved_sha1:
+        raise VerificationError("BASELINE_MISMATCH: snapshot metadata does not match automation state")
+
     with tempfile.TemporaryDirectory(prefix="wakfu-production-update-") as temporary:
+        # GitHub-hosted runners start from a clean checkout, so the approved
+        # source JAR is intentionally not kept in the repository.  Re-fetch
+        # the exact baseline recorded in state.json from the allow-listed
+        # Ankama CDN and verify its assembled SHA-1 before using it for the
+        # source diff.  This keeps the production workflow reproducible
+        # without committing proprietary game data or trusting a local file.
+        local_source = Path(temporary) / "approved-i18n_en.jar"
+        client.download_localization(approved_version, local_source)
+        if sha1(local_source).lower() != approved_sha1.lower():
+            raise VerificationError("BASELINE_MISMATCH: downloaded approved source does not match automation state")
+
+        version = client.latest_version()
+        entry, _ = client.target_entry(version)
         source = Path(temporary) / "i18n_en.jar"
         client.download_localization(version, source)
         current = snapshot(source, version, entry.sha1)

@@ -69,19 +69,25 @@ class PipelineSimulation(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             (root / "automation" / "snapshots").mkdir(parents=True)
-            (root / "Oyun_Kaynaklari" / "Guncel").mkdir(parents=True)
             (root / "Ceviri_Verileri").mkdir(parents=True)
-            before = root / "Oyun_Kaynaklari" / "Guncel" / "i18n_en.jar"
+            before = root / "before.jar"
             after = root / "after.jar"
             make_jar(before, "same=Same\n", "clean=Clean\n")
             make_jar(after, "same=Same\nnew=Unresolved\n", "clean=Clean\n")
             state_path = root / "automation" / "state.json"
             baseline_path = root / "automation" / "snapshots" / "baseline.json"
             state_path.write_text(
-                json.dumps({"schema": 1, "baseline": "snapshots/baseline.json", "source_sha1": sha1(before)}),
+                json.dumps(
+                    {
+                        "schema": 1,
+                        "baseline": "snapshots/baseline.json",
+                        "game_version": "old",
+                        "source_sha1": sha1(before),
+                    }
+                ),
                 encoding="utf-8",
             )
-            baseline_path.write_text(json.dumps(snapshot(before, "old", "before-manifest")), encoding="utf-8")
+            baseline_path.write_text(json.dumps(snapshot(before, "old", sha1(before))), encoding="utf-8")
             translation_path = root / "Ceviri_Verileri" / "wakfu_tr_ceviri.json"
             manual_path = root / "Ceviri_Verileri" / "manual_repairs_v23.json"
             terms_path = root / "Ceviri_Verileri" / "terim_duzeltmeleri.json"
@@ -98,8 +104,8 @@ class PipelineSimulation(unittest.TestCase):
                 def target_entry(self, _version):
                     return SimpleNamespace(sha1="after-manifest"), None
 
-                def download_localization(self, _version, destination):
-                    shutil.copyfile(after, destination)
+                def download_localization(self, version, destination):
+                    shutil.copyfile(before if version == "old" else after, destination)
 
             with patch.object(production_pr_update, "ROOT", root), \
                 patch.object(production_pr_update, "STATE_PATH", state_path), \
