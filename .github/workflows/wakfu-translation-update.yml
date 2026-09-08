@@ -173,8 +173,8 @@ jobs:
     env:
       ARGOS_DEVICE_TYPE: cpu
       ARGOS_DEVICE_COUNT: '1'
-      ARGOS_VENV: $RUNNER_TEMP/argos-venv
-      ARGOS_MODEL: $RUNNER_TEMP/translate-en_tr-1_5.argosmodel
+      ARGOS_VENV: argos-venv
+      ARGOS_MODEL: translate-en_tr-1_5.argosmodel
       GAME_VERSION: ${{ needs.inspect-upstream.outputs.game_version }}
       SOURCE_SHA1: ${{ needs.inspect-upstream.outputs.source_sha1 }}
       GH_TOKEN: ${{ github.token }}
@@ -188,21 +188,26 @@ jobs:
           python-version: '3.11'
       - name: Create isolated translation runtime
         continue-on-error: true
-        run: python -m venv "$ARGOS_VENV"
+        run: |
+          argos_venv="$RUNNER_TEMP/$ARGOS_VENV"
+          python -m venv "$argos_venv"
       - name: Install exact translation runtime
         continue-on-error: true
-        run: "$ARGOS_VENV/bin/python -m pip install --disable-pip-version-check -r requirements-translation.txt"
+        run: |
+          argos_venv="$RUNNER_TEMP/$ARGOS_VENV"
+          "$argos_venv/bin/python" -m pip install --disable-pip-version-check -r requirements-translation.txt
       - name: Download and verify locked Argos model from GitHub Release
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          target="$ARGOS_MODEL"
+          argos_venv="$RUNNER_TEMP/$ARGOS_VENV"
+          target="$RUNNER_TEMP/$ARGOS_MODEL"
           release_json="$RUNNER_TEMP/argos-release.json"
           gh release view runtime-argos-1.5 --repo "$GITHUB_REPOSITORY" \
             --json isDraft,isPrerelease,tagName,assets > "$release_json"
-          "$ARGOS_VENV/bin/python" - "$release_json" <<'PY'
+          "$argos_venv/bin/python" - "$release_json" <<'PY'
           import json
           import pathlib
           import sys
@@ -222,10 +227,10 @@ jobs:
           if expected_asset not in {item.get("name") for item in release.get("assets", [])}:
               raise SystemExit("Argos model asset is missing from the expected GitHub Release")
           PY
-          "$ARGOS_VENV/bin/python" -c 'import pathlib,sys; p=pathlib.Path(sys.argv[1]); p.unlink(missing_ok=True)' "$target"
+          "$argos_venv/bin/python" -c 'import pathlib,sys; p=pathlib.Path(sys.argv[1]); p.unlink(missing_ok=True)' "$target"
           gh release download runtime-argos-1.5 --repo "$GITHUB_REPOSITORY" \
             --pattern 'wakfu-translate-en_tr-1_5.argosmodel' --output "$target" --clobber
-          "$ARGOS_VENV/bin/python" - "$target" <<'PY'
+          "$argos_venv/bin/python" - "$target" <<'PY'
           import hashlib, json, pathlib, sys
           lock = json.loads(pathlib.Path("automation/model-lock.json").read_text(encoding="utf-8"))
           target = pathlib.Path(sys.argv[1])
@@ -239,9 +244,11 @@ jobs:
         if: always()
         run: |
           set -euo pipefail
-          if [ -x "$ARGOS_VENV/bin/python" ] \
-            && [ -s "$ARGOS_MODEL" ] \
-            && "$ARGOS_VENV/bin/python" -c 'import argostranslate' >/dev/null 2>&1; then
+          argos_venv="$RUNNER_TEMP/$ARGOS_VENV"
+          argos_model="$RUNNER_TEMP/$ARGOS_MODEL"
+          if [ -x "$argos_venv/bin/python" ] \
+            && [ -s "$argos_model" ] \
+            && "$argos_venv/bin/python" -c 'import argostranslate' >/dev/null 2>&1; then
             echo "ready=true" >> "$GITHUB_OUTPUT"
             echo "ARGOS_READY=true" >> "$GITHUB_ENV"
             echo "ARGOS_READY|true"
@@ -253,11 +260,13 @@ jobs:
       - name: Build and validate production candidate
         run: |
           set -euo pipefail
+          argos_venv="$RUNNER_TEMP/$ARGOS_VENV"
+          argos_model="$RUNNER_TEMP/$ARGOS_MODEL"
           python_bin=python
           model_args=()
           if [ "${ARGOS_READY:-false}" = "true" ]; then
-            python_bin="$ARGOS_VENV/bin/python"
-            model_args=(--model-path "$ARGOS_MODEL" --model-lock automation/model-lock.json)
+            python_bin="$argos_venv/bin/python"
+            model_args=(--model-path "$argos_model" --model-lock automation/model-lock.json)
             export XDG_CONFIG_HOME="$RUNNER_TEMP/argos-config"
             export XDG_DATA_HOME="$RUNNER_TEMP/argos-data"
             export XDG_CACHE_HOME="$RUNNER_TEMP/argos-cache"
