@@ -173,8 +173,8 @@ jobs:
     env:
       ARGOS_DEVICE_TYPE: cpu
       ARGOS_DEVICE_COUNT: '1'
-      ARGOS_VENV: ${{ runner.temp }}/argos-venv
-      ARGOS_MODEL: ${{ runner.temp }}/translate-en_tr-1_5.argosmodel
+      ARGOS_VENV: $RUNNER_TEMP/argos-venv
+      ARGOS_MODEL: $RUNNER_TEMP/translate-en_tr-1_5.argosmodel
       GAME_VERSION: ${{ needs.inspect-upstream.outputs.game_version }}
       SOURCE_SHA1: ${{ needs.inspect-upstream.outputs.source_sha1 }}
       GH_TOKEN: ${{ github.token }}
