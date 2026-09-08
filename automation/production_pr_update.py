@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import subprocess
 import sys
 import tempfile
@@ -26,6 +27,17 @@ STATE_PATH = ROOT / "automation" / "state.json"
 TRANSLATION_PATH = ROOT / "Ceviri_Verileri" / "wakfu_tr_ceviri.json"
 MANUAL_PATH = ROOT / "Ceviri_Verileri" / "manual_repairs_v23.json"
 TERMS_PATH = ROOT / "Ceviri_Verileri" / "terim_duzeltmeleri.json"
+
+
+# The cleaned upstream properties copy is lower-cased as a preprocessing step.
+# Its format tokens therefore may differ from the normal properties entry only
+# by letter case.  Keep this matcher local to duplicate coalescing so the
+# normal candidate validation remains strict everywhere else.
+_DUPLICATE_FORMAT_ATOM = re.compile(
+    r"\{\[[^\]]+\]\?|\\[ntr]|<(?:[^<>\"']|\"[^\"]*\"|'[^']*')*>|"
+    r"\[(?:[#$=,<>/-][^\]]*|\d+[A-Za-z0-9*!<>=.$-]*|[A-Za-z][A-Za-z0-9_.-]{0,31})\]|"
+    r"%[A-Za-z_][A-Za-z0-9_.-]*%"
+)
 
 
 def _load(path: Path) -> dict:
@@ -59,6 +71,36 @@ def _write_properties(source: Path, output: Path, proposals: dict[str, str]) -> 
             target.writestr(info.filename, "".join(result).encode("utf-8"))
 
 
+def _normalize_duplicate_token_case(source: str, candidate: str) -> str | None:
+    """Align case-only token spelling differences with one source occurrence.
+
+    WAKFU's ``texts_en_cleaned.properties`` entry is lower-cased, including
+    placeholder names.  The translation itself must still be shared by both
+    duplicate occurrences, so this helper creates a validation-only view with
+    the source occurrence's token spelling.  It never changes the value kept
+    in translation memory or written to the candidate.
+    """
+    source_atoms = list(_DUPLICATE_FORMAT_ATOM.finditer(source))
+    candidate_atoms = list(_DUPLICATE_FORMAT_ATOM.finditer(candidate))
+    if len(source_atoms) != len(candidate_atoms):
+        return None
+    if any(source_atom.group().casefold() != candidate_atom.group().casefold()
+           for source_atom, candidate_atom in zip(source_atoms, candidate_atoms)):
+        return None
+    pieces = list(candidate)
+    for source_atom, candidate_atom in reversed(list(zip(source_atoms, candidate_atoms))):
+        pieces[candidate_atom.start():candidate_atom.end()] = source_atom.group()
+    return "".join(pieces)
+
+
+def _duplicate_format_ok(source: str, candidate: str) -> bool:
+    """Validate a shared duplicate candidate, tolerating cleaned-token case."""
+    if format_ok(source, candidate):
+        return True
+    normalized = _normalize_duplicate_token_case(source, candidate)
+    return normalized is not None and format_ok(source, normalized)
+
+
 def coalesce_proposals_by_key(records: list[Record], proposals: dict[str, str]) -> dict[str, str]:
     """Choose one safe translation for duplicate key occurrences.
 
@@ -90,7 +132,7 @@ def coalesce_proposals_by_key(records: list[Record], proposals: dict[str, str]) 
         equivalent_sources = len({record.source.strip().casefold() for record in group}) == 1
         if equivalent_sources:
             for candidate in candidates:
-                if all(format_ok(record.source, candidate) for record in group):
+                if all(_duplicate_format_ok(record.source, candidate) for record in group):
                     by_key[key] = candidate
                     break
             else:
