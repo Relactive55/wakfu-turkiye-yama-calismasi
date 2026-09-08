@@ -139,36 +139,46 @@ def run(
         terms = (glossary.get("keys", {}), glossary.get("values", {}), glossary.get("phrases", {}))
         unresolved = [record for record in delta["NEW"] + delta["MODIFIED"] if record.key not in manual and not translations.get(record.key) and record.key not in terms[0] and record.source not in terms[1]]
         translate = None
+
+        def provider_stop(reason_code: str) -> dict[str, object]:
+            return _write_report(
+                output_dir,
+                build_provider_unavailable_report(
+                    game_version=version,
+                    source_sha1=entry.sha1,
+                    diff=counts,
+                    unresolved=unresolved,
+                    reason_code=reason_code,
+                ),
+            )
+
         if unresolved:
             if model_path is None or model_lock is None:
                 if allow_provider_unavailable:
-                    return _write_report(
-                        output_dir,
-                        build_provider_unavailable_report(
-                            game_version=version,
-                            source_sha1=entry.sha1,
-                            diff=counts,
-                            unresolved=unresolved,
-                            reason_code="ARGOS_INPUT_MISSING",
-                        ),
-                    )
+                    return provider_stop("ARGOS_INPUT_MISSING")
                 raise TranslationProviderUnavailable("TRANSLATION_PROVIDER_UNAVAILABLE: Argos model is required for unresolved production records")
             try:
                 translate = install_locked_model(model_path, model_lock)
             except Exception:
                 if not allow_provider_unavailable:
                     raise
-                return _write_report(
-                    output_dir,
-                    build_provider_unavailable_report(
-                        game_version=version,
-                        source_sha1=entry.sha1,
-                        diff=counts,
-                        unresolved=unresolved,
-                        reason_code="ARGOS_RUNTIME_OR_MODEL_UNAVAILABLE",
-                    ),
-                )
-        proposals, origins = resolve_changes(delta["NEW"] + delta["MODIFIED"], translations=translations, manual=manual, terms=terms, argos=translate)
+                return provider_stop("ARGOS_RUNTIME_OR_MODEL_UNAVAILABLE")
+        if translate is not None:
+            provider = translate
+
+            def guarded_translate(text: str) -> str:
+                try:
+                    return provider(text)
+                except Exception as exc:
+                    raise TranslationProviderUnavailable("TRANSLATION_PROVIDER_UNAVAILABLE: Argos translation call failed") from exc
+
+            translate = guarded_translate
+        try:
+            proposals, origins = resolve_changes(delta["NEW"] + delta["MODIFIED"], translations=translations, manual=manual, terms=terms, argos=translate)
+        except TranslationProviderUnavailable:
+            if not allow_provider_unavailable:
+                raise
+            return provider_stop("ARGOS_TRANSLATION_RUNTIME_UNAVAILABLE")
         validate_proposals(diff=delta, proposals=proposals, baseline_translations={r.identity: r.source for r in before})
 
         by_key: dict[str, str] = {}
