@@ -35,6 +35,34 @@ class PipelineSimulation(unittest.TestCase):
             {"age.title": "\u015eans"},
         )
 
+    def test_case_only_duplicate_tokens_share_primary_proposal(self) -> None:
+        records = [
+            Record(
+                "texts_en.properties:content.67.1275#1",
+                "texts_en.properties",
+                "content.67.1275",
+                1,
+                "Hear ye! ([#breedName]? Don't bother applying.)",
+            ),
+            Record(
+                "texts_en_cleaned.properties:content.67.1275#1",
+                "texts_en_cleaned.properties",
+                "content.67.1275",
+                1,
+                "hear ye! ([#breedname]? don't bother applying.)",
+            ),
+        ]
+        self.assertEqual(
+            coalesce_proposals_by_key(
+                records,
+                {
+                    records[0].identity: "Dinle! ([#breedName]? Uygulama yapma.)",
+                    records[1].identity: "Dinle! ([#breedname]? Uygulama yapma.)",
+                },
+            ),
+            {"content.67.1275": "Dinle! ([#breedName]? Uygulama yapma.)"},
+        )
+
     def test_different_duplicate_sources_still_fail_closed(self) -> None:
         records = [
             Record("texts_en.properties:dup#1", "texts_en.properties", "dup", 1, "One"),
