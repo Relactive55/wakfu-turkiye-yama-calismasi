@@ -84,9 +84,13 @@ def _format_signature(text: str) -> tuple[tuple[str, str], ...] | None:
     closing braces, but deliberately ignores ordinary words in branches.
     """
     header_re = re.compile(r"\{\[[^\]]+\]\?")
-    headers = tuple(header_re.findall(text))
+    # ``texts_en_cleaned.properties`` is lower-cased upstream, including
+    # placeholder names.  Token spelling is therefore compared
+    # case-insensitively; the build step still restores the exact source
+    # spelling before the JAR is emitted.
+    headers = tuple(item.casefold() for item in header_re.findall(text))
     without_headers = header_re.sub("", text)
-    ordinary = tuple(match.group(0) for match in _ORDINARY_TOKEN.finditer(without_headers))
+    ordinary = tuple(match.group(0).casefold() for match in _ORDINARY_TOKEN.finditer(without_headers))
 
     # A colon can be ordinary prose (for example ``"Some items:"``), so its
     # exact position is not a reliable delimiter.  Match the release audit's

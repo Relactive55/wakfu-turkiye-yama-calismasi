@@ -792,7 +792,14 @@ def format_ok(source, target):
     # gerçek satır sonu yerine görünür "\n" yazdırır.
     if "\\\\n" in target and "\\\\n" not in source:
         return False
-    if format_tokens(source) == format_tokens(target):
+    source_tokens = format_tokens(source)
+    target_tokens = format_tokens(target)
+    if source_tokens == target_tokens:
+        return True
+    # The upstream cleaned properties copy is lower-cased, including
+    # placeholder names.  The JAR builder already restores source spelling;
+    # audit the shared translation memory by token identity, not casing.
+    if [value.casefold() for value in source_tokens] == [value.casefold() for value in target_tokens]:
         return True
 
     # Deeply nested Wakfu conditionals occasionally contain natural punctuation
