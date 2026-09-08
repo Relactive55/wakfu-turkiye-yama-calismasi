@@ -19,6 +19,30 @@ def make_jar(path: Path, main: str, clean: str) -> None:
         z.writestr("texts_en_cleaned.properties", clean)
 
 class PipelineSimulation(unittest.TestCase):
+    def test_argos_placeholder_loss_retries_without_sending_tokens(self) -> None:
+        record = Record(
+            "texts_en.properties:placeholder#1",
+            "texts_en.properties",
+            "placeholder",
+            1,
+            "Use [#1] now",
+        )
+        calls: list[str] = []
+
+        def provider(text: str) -> str:
+            calls.append(text)
+            if "ZXQ" in text:
+                return "Kullan şimdi"
+            return text.replace("Use", "Kullan").replace("now", "şimdi")
+
+        proposals, origins = resolve_changes(
+            [record], translations={}, manual={}, terms=({}, {}, {}), argos=provider
+        )
+        self.assertEqual(proposals[record.identity], "Kullan [#1] şimdi")
+        self.assertEqual(origins[record.identity], "argos")
+        self.assertGreaterEqual(len(calls), 3)
+        self.assertTrue(all("ZXQ" not in call for call in calls[1:]))
+
     def test_full_fixture_diff_memory_argos_validation(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root=Path(temp); before=root/'before.jar'; after=root/'after.jar'
