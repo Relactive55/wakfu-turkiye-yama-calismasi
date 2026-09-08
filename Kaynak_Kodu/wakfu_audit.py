@@ -649,7 +649,7 @@ def is_reviewed_haven_translation(source, target):
 
 def is_translatable_inventory_name(key, source):
     """Only reviewed generic inventory/book labels may be translated."""
-    return key.startswith("content.15.") and (
+    return key.startswith(("content.8.", "content.15.")) and (
         key in REVIEWED_TRANSLATABLE_NAME_KEYS
         or source.strip() in TRANSLATABLE_GENERIC_NAME_VALUES
     )
