@@ -26,6 +26,8 @@ temp/
 tmp/
 backup/
 backups/
+audit-*/
+release-assets-*/
 installed_patch.json
 **/installed_patch.json
 *.argosmodel

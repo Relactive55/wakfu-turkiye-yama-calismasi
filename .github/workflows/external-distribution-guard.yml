@@ -1,0 +1,30 @@
+name: External distribution link guard
+
+# This workflow has no secrets and only reads the checked-out tree.  It keeps
+# external binary/redirect links out of both proposed and merged content.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: external-distribution-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  guard:
+    name: No external binary distribution links
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
+        with:
+          python-version: '3.11'
+      - name: Scan tracked content
+        run: python -m automation.external_distribution_guard --root .

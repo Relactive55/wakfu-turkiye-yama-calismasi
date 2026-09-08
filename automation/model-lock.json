@@ -3,8 +3,10 @@
   "from_language": "en",
   "to_language": "tr",
   "version": "1.5",
-  "url": "https://argos-net.com/v1/translate-en_tr-1_5.argosmodel",
+  "release_tag": "runtime-argos-1.5",
+  "asset_name": "wakfu-translate-en_tr-1_5.argosmodel",
+  "url": "https://github.com/Relactive55/wakfu-turkiye-yama-calismasi/releases/download/runtime-argos-1.5/wakfu-translate-en_tr-1_5.argosmodel",
   "sha256": "2d553a00880a0c21dea5b1c375535659e6bf18c9bf2ce9847c2a2fd2ff50316a",
   "size_bytes": 124742526,
-  "policy": "Fail closed: this file is never changed by a workflow."
+  "policy": "Fail closed: this file is never changed by a workflow; the model must come from the pinned GitHub Release asset."
 }
