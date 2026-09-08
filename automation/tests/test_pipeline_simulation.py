@@ -8,6 +8,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 from automation.localization_pipeline import Record, diff_records, format_ok, records_from_jar, resolve_changes, validate_proposals
+from automation.translation_quality import quality_problem
 from automation.errors import TranslationProviderUnavailable, VerificationError
 import automation.production_pr_update as production_pr_update
 from automation.production_pr_update import build_provider_unavailable_report, coalesce_proposals_by_key
@@ -19,6 +20,85 @@ def make_jar(path: Path, main: str, clean: str) -> None:
         z.writestr("texts_en_cleaned.properties", clean)
 
 class PipelineSimulation(unittest.TestCase):
+    def test_quality_guard_rejects_half_translated_action(self) -> None:
+        self.assertIsNotNone(
+            quality_problem(
+                "content.64.11633",
+                "Interact with the mysterious stool",
+                "Gizemli tabure ile Interact",
+            )
+        )
+        self.assertIsNotNone(
+            quality_problem(
+                "content.64.11634",
+                "Harvest Citronanas on the island 10 times",
+                "Harvest Citronanas on ada 10 kez",
+            )
+        )
+
+    def test_quality_guard_rejects_repeated_or_untranslated_ui_words(self) -> None:
+        self.assertIsNotNone(
+            quality_problem("stasis.dungeon.difficulty5", "Extreme", "Extreme Extreme Extreme Extreme")
+        )
+        self.assertIsNotNone(quality_problem("options.fpsCap", "FPS limit:", "FPS limit:"))
+        self.assertIsNotNone(
+            quality_problem(
+                "ranch.add.building.biome.limit",
+                "Max per biome: [#1]/[#2]",
+                "Biyome başına Max: [#1]/[#2]",
+            )
+        )
+
+    def test_quality_guard_allows_reviewed_turkish_and_proper_names(self) -> None:
+        self.assertIsNone(
+            quality_problem(
+                "content.64.11628",
+                "Find a recruitment poster in Sufokia",
+                "Sufokia'da bir işe alım posteri bul",
+            )
+        )
+        self.assertIsNone(
+            quality_problem(
+                "japan.expo.2026.fight.final.score.damage",
+                'Damage inflicted on Ignemikhal: <b color="34D2E5">[#1]</b>',
+                'Ignemikhal\'a verilen hasar: <b color="34D2E5">[#1]</b>',
+            )
+        )
+
+    def test_resolve_changes_fails_closed_on_bad_automatic_candidate(self) -> None:
+        record = Record(
+            "texts_en.properties:bad#1",
+            "texts_en.properties",
+            "bad",
+            1,
+            "Interact with the mysterious stool",
+        )
+        with self.assertRaisesRegex(VerificationError, "translation quality guard"):
+            resolve_changes(
+                [record],
+                translations={},
+                manual={},
+                terms=({}, {}, {}),
+                argos=lambda _text: "Gizemli tabure ile Interact",
+            )
+
+    def test_resolve_changes_does_not_reuse_bad_memory_translation(self) -> None:
+        record = Record(
+            "texts_en.properties:remembered#1",
+            "texts_en.properties",
+            "remembered",
+            1,
+            "Max per biome: [#1]/[#2]",
+        )
+        with self.assertRaisesRegex(VerificationError, "translation quality guard"):
+            resolve_changes(
+                [record],
+                translations={"remembered": "Biyome başına Max: [#1]/[#2]"},
+                manual={},
+                terms=({}, {}, {}),
+                argos=None,
+            )
+
     def test_case_only_duplicate_sources_share_primary_proposal(self) -> None:
         records = [
             Record("texts_en.properties:age.title#1", "texts_en.properties", "age.title", 1, "Age"),
@@ -119,6 +199,23 @@ class PipelineSimulation(unittest.TestCase):
         )
         self.assertEqual(proposals[record.identity], "\u015eans T\u0131ls\u0131m\u0131{[~1]?s:}")
         self.assertEqual(origins[record.identity], "manual")
+
+    def test_translated_simple_suffix_marker_is_not_duplicated(self) -> None:
+        record = Record(
+            "texts_en.properties:encyclopedia.monster.type#1",
+            "texts_en.properties",
+            "encyclopedia.monster.type",
+            1,
+            "Archmonster{[~1]?s:}",
+        )
+        proposals, _origins = resolve_changes(
+            [record],
+            translations={},
+            manual={"encyclopedia.monster.type": "Ar\u015fcanavar{[~1]?lar:}"},
+            terms=({}, {}, {}),
+            argos=None,
+        )
+        self.assertEqual(proposals[record.identity], "Ar\u015fcanavar{[~1]?lar:}")
 
     def test_argos_placeholder_loss_retries_without_sending_tokens(self) -> None:
         record = Record(
