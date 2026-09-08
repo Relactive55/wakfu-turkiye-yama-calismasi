@@ -63,6 +63,24 @@ class PipelineSimulation(unittest.TestCase):
             {"content.67.1275": "Dinle! ([#breedName]? Uygulama yapma.)"},
         )
 
+    def test_cleaned_copy_accepts_case_only_placeholder_spelling(self) -> None:
+        record = Record(
+            "texts_en_cleaned.properties:content.75.7401#1",
+            "texts_en_cleaned.properties",
+            "content.75.7401",
+            1,
+            "hear ye [#breedname]",
+        )
+        proposals, origins = resolve_changes(
+            [record],
+            translations={},
+            manual={"content.75.7401": "Dinle [#breedName]"},
+            terms=({}, {}, {}),
+            argos=None,
+        )
+        self.assertEqual(proposals[record.identity], "Dinle [#breedName]")
+        self.assertEqual(origins[record.identity], "manual")
+
     def test_different_duplicate_sources_still_fail_closed(self) -> None:
         records = [
             Record("texts_en.properties:dup#1", "texts_en.properties", "dup", 1, "One"),
