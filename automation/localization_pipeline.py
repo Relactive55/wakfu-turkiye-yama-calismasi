@@ -12,7 +12,18 @@ from typing import Callable, Iterable
 from .errors import TranslationProviderUnavailable, VerificationError
 
 ENTRIES = ("texts_en.properties", "texts_en_cleaned.properties")
+# TOKEN is used when text is sent through Argos.  A complete conditional is
+# masked as one unit there so that its control syntax can never be rewritten by
+# the model.  Validation below uses a recursive structural tokenizer instead:
+# words inside conditional branches are translatable and must not be compared
+# byte-for-byte with the English source.
 TOKEN = re.compile(r"\{\[[^\]]+\]\?(?:[^{}]|\\.)*\}|\\[ntr]|<[^>]*>|\[(?:[#$=,<>/-][^\]]*|\d+[A-Za-z0-9*!<>=.$-]*|[A-Za-z][A-Za-z0-9_.-]{0,31})\]|%[A-Za-z_][A-Za-z0-9_.-]*%")
+_ORDINARY_TOKEN = re.compile(
+    r"\\[ntr]|<(?:[^<>\"']|\"[^\"]*\"|'[^']*')*>|"
+    r"\[(?:[#$=,<>/-][^\]]*|\d+[A-Za-z0-9*!<>=.$-]*|[A-Za-z][A-Za-z0-9_.-]{0,31})\]|"
+    r"%[A-Za-z_][A-Za-z0-9_.-]*%"
+)
+_SIMPLE_CONDITIONAL = re.compile(r"\{\[[^\]]+\]\?(?:s|es)?:\}")
 
 
 @dataclass(frozen=True)
@@ -59,6 +70,81 @@ def _terms(path: Path) -> tuple[dict, dict, dict]:
 
 def same_tokens(source: str, target: str) -> bool:
     return [m.group() for m in TOKEN.finditer(source)] == [m.group() for m in TOKEN.finditer(target)]
+
+
+def _format_signature(text: str) -> tuple[tuple[str, str], ...] | None:
+    """Return syntax atoms while ignoring natural-language branch text.
+
+    WAKFU conditionals contain translatable text on both sides of ``:``.  The
+    old validator treated the whole conditional as an opaque token, which
+    rejected valid translations such as ``{[~1]?s:}`` -> the same suffix and
+    ``{[~1]?[#1]:the Haven Place}`` -> the same structure with translated
+    branch words.
+    This parser compares condition headers, nested placeholders, separators and
+    closing braces, but deliberately ignores ordinary words in branches.
+    """
+    header_re = re.compile(r"\{\[[^\]]+\]\?")
+    headers = tuple(header_re.findall(text))
+    without_headers = header_re.sub("", text)
+    ordinary = tuple(match.group(0) for match in _ORDINARY_TOKEN.finditer(without_headers))
+
+    # A colon can be ordinary prose (for example ``"Some items:"``), so its
+    # exact position is not a reliable delimiter.  Match the release audit's
+    # conservative structural check: every conditional header must close.  The
+    # presence/absence of an unescaped branch separator at each nesting level is
+    # retained, while its exact position is intentionally ignored.
+    conditional_closed: list[bool] = []
+    conditional_separators: list[bool] = []
+    for match in header_re.finditer(text):
+        depth = 1
+        separator_found = False
+        closed = False
+        for index in range(match.end(), len(text)):
+            char = text[index]
+            if text.startswith("{[", index):
+                depth += 1
+            elif char == "}":
+                depth -= 1
+                if depth == 0:
+                    closed = True
+                    break
+            elif char == ":" and depth == 1 and (index == 0 or text[index - 1] != "\\"):
+                separator_found = True
+        # A small number of legacy strings contain an intentionally unterminated
+        # outer conditional.  Preserve that source shape, but still reject a
+        # translation that changes it by comparing the closed flags below.
+        conditional_closed.append(closed)
+        conditional_separators.append(separator_found)
+    if len(conditional_closed) != len(headers):
+        return None
+    return (
+        ("headers", "\x1f".join(headers)),
+        ("ordinary", "\x1f".join(ordinary)),
+        ("conditional-count", str(len(headers))),
+        ("conditional-closed", "".join("1" if item else "0" for item in conditional_closed)),
+        ("conditional-separators", "".join("1" if item else "0" for item in conditional_separators)),
+        ("open-braces", str(text.count("{"))),
+        ("close-braces", str(text.count("}"))),
+    )
+
+
+def _repair_simple_conditional_boundaries(source: str, candidate: str) -> str:
+    """Carry newly-added, suffix/prefix-only count markers into old TM text.
+
+    Existing reviewed translations can predate a source-only marker such as
+    ``Lucky Charm{[~1]?s:}``.  It is safe to graft these simple markers only at
+    an unambiguous string boundary; conditional branches containing words are
+    intentionally left for human review instead of being guessed.
+    """
+    result = candidate
+    for marker in _SIMPLE_CONDITIONAL.findall(source):
+        if source.rstrip().endswith(marker) and not result.rstrip().endswith(marker):
+            trailing = result[len(result.rstrip()):]
+            result = result.rstrip() + marker + trailing
+        elif source.lstrip().startswith(marker) and not result.lstrip().startswith(marker):
+            leading = result[: len(result) - len(result.lstrip())]
+            result = leading + marker + result.lstrip()
+    return result
 
 
 def mask_tokens(text: str) -> tuple[str, list[str]]:
@@ -152,8 +238,10 @@ def _conditional_shape(text: str) -> list[str]:
 
 
 def format_ok(source: str, target: str) -> bool:
-    """Validate token order plus conditional branch structure."""
-    return same_tokens(source, target) and _conditional_shape(source) == _conditional_shape(target)
+    """Validate syntax atoms while allowing conditional text to translate."""
+    source_signature = _format_signature(source)
+    target_signature = _format_signature(target)
+    return source_signature is not None and source_signature == target_signature
 
 
 def resolve_changes(changes: Iterable[Record], *, translations: dict, manual: dict, terms: tuple[dict, dict, dict], argos: Callable[[str], str] | None = None) -> tuple[dict[str, str], dict[str, str]]:
@@ -173,6 +261,8 @@ def resolve_changes(changes: Iterable[Record], *, translations: dict, manual: di
             if argos is None:
                 raise TranslationProviderUnavailable("TRANSLATION_PROVIDER_UNAVAILABLE: Argos runtime is required for unresolved NEW/MODIFIED records")
             continue
+        if source != "argos":
+            candidate = _repair_simple_conditional_boundaries(record.source, candidate)
         if not candidate.strip() or not format_ok(record.source, candidate):
             raise VerificationError("translation candidate fails token validation: " + record.identity)
         output[record.identity], origin[record.identity] = candidate, source

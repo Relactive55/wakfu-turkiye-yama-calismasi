@@ -7,7 +7,7 @@ import zipfile
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
-from automation.localization_pipeline import Record, diff_records, records_from_jar, resolve_changes, validate_proposals
+from automation.localization_pipeline import Record, diff_records, format_ok, records_from_jar, resolve_changes, validate_proposals
 from automation.errors import TranslationProviderUnavailable, VerificationError
 import automation.production_pr_update as production_pr_update
 from automation.production_pr_update import build_provider_unavailable_report
@@ -19,6 +19,34 @@ def make_jar(path: Path, main: str, clean: str) -> None:
         z.writestr("texts_en_cleaned.properties", clean)
 
 class PipelineSimulation(unittest.TestCase):
+    def test_conditional_branch_words_can_be_translated(self) -> None:
+        self.assertTrue(
+            format_ok(
+                "Enter {[~1]?[#1]:the Haven Place}",
+                "Gir {[~1]?in [#1]:in S\u0131\u011fanak Alan\u0131}",
+            )
+        )
+        self.assertTrue(format_ok("Lucky Charm{[~1]?s:}", "\u015eans T\u0131ls\u0131m\u0131{[~1]?s:}"))
+        self.assertFalse(format_ok("Lucky Charm{[~1]?s:}", "\u015eans T\u0131ls\u0131m\u0131"))
+
+    def test_reviewed_translation_carries_new_simple_suffix_marker(self) -> None:
+        record = Record(
+            "texts_en.properties:content.14.849#1",
+            "texts_en.properties",
+            "content.14.849",
+            1,
+            "Lucky Charm{[~1]?s:}",
+        )
+        proposals, origins = resolve_changes(
+            [record],
+            translations={},
+            manual={"content.14.849": "\u015eans T\u0131ls\u0131m\u0131"},
+            terms=({}, {}, {}),
+            argos=None,
+        )
+        self.assertEqual(proposals[record.identity], "\u015eans T\u0131ls\u0131m\u0131{[~1]?s:}")
+        self.assertEqual(origins[record.identity], "manual")
+
     def test_argos_placeholder_loss_retries_without_sending_tokens(self) -> None:
         record = Record(
             "texts_en.properties:placeholder#1",
