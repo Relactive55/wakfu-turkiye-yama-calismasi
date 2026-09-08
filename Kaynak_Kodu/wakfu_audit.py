@@ -441,6 +441,9 @@ REVIEWED_TRANSLATABLE_NAME_KEYS = {
     "content.8.5355",  # Territory Control Bonus
     "content.8.1915",  # Area bonus (general region bonus title)
     "content.8.1916",  # Area bonus (general region bonus title)
+    "content.8.3430",  # Sharpening
+    "content.8.7757",  # Precision Shot
+    "content.8.7792",  # Precision
 }
 
 # Aynı kitap/nadirlik metni yeni bir content.15 anahtarıyla tekrar gelirse,
@@ -649,7 +652,7 @@ def is_reviewed_haven_translation(source, target):
 
 def is_translatable_inventory_name(key, source):
     """Only reviewed generic inventory/book labels may be translated."""
-    return key.startswith("content.15.") and (
+    return key.startswith(("content.8.", "content.15.")) and (
         key in REVIEWED_TRANSLATABLE_NAME_KEYS
         or source.strip() in TRANSLATABLE_GENERIC_NAME_VALUES
     )
