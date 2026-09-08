@@ -10,7 +10,7 @@ from unittest.mock import patch
 from automation.localization_pipeline import Record, diff_records, format_ok, records_from_jar, resolve_changes, validate_proposals
 from automation.errors import TranslationProviderUnavailable, VerificationError
 import automation.production_pr_update as production_pr_update
-from automation.production_pr_update import build_provider_unavailable_report
+from automation.production_pr_update import build_provider_unavailable_report, coalesce_proposals_by_key
 from automation.update_wakfu_localization import sha1, snapshot
 
 def make_jar(path: Path, main: str, clean: str) -> None:
@@ -19,6 +19,33 @@ def make_jar(path: Path, main: str, clean: str) -> None:
         z.writestr("texts_en_cleaned.properties", clean)
 
 class PipelineSimulation(unittest.TestCase):
+    def test_case_only_duplicate_sources_share_primary_proposal(self) -> None:
+        records = [
+            Record("texts_en.properties:age.title#1", "texts_en.properties", "age.title", 1, "Age"),
+            Record("texts_en_cleaned.properties:age.title#1", "texts_en_cleaned.properties", "age.title", 1, "age"),
+        ]
+        self.assertEqual(
+            coalesce_proposals_by_key(
+                records,
+                {
+                    records[0].identity: "\u015eans",
+                    records[1].identity: "\u015fans",
+                },
+            ),
+            {"age.title": "\u015eans"},
+        )
+
+    def test_different_duplicate_sources_still_fail_closed(self) -> None:
+        records = [
+            Record("texts_en.properties:dup#1", "texts_en.properties", "dup", 1, "One"),
+            Record("texts_en.properties:dup#2", "texts_en.properties", "dup", 2, "Two"),
+        ]
+        with self.assertRaises(VerificationError):
+            coalesce_proposals_by_key(
+                records,
+                {records[0].identity: "Bir", records[1].identity: "İki"},
+            )
+
     def test_conditional_branch_words_can_be_translated(self) -> None:
         self.assertTrue(
             format_ok(
