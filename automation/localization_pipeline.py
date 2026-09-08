@@ -83,6 +83,48 @@ def restore_tokens(text: str, tokens: list[str]) -> str:
     return text
 
 
+def _translate_without_tokens(text: str, provider: Callable[[str], str]) -> str:
+    """Translate only the human-readable spans of a tokenized value.
+
+    Some machine-translation models rewrite or drop opaque sentinel strings
+    even though they contain no natural language.  When that happens, retry
+    by sending each non-token span separately and splice the original tokens
+    back in locally.  Whitespace-only spans are kept verbatim so formatting
+    around placeholders is not changed by the provider.
+    """
+    result: list[str] = []
+    cursor = 0
+    for match in TOKEN.finditer(text):
+        segment = text[cursor : match.start()]
+        if segment and segment.strip():
+            result.append(provider(segment))
+        else:
+            result.append(segment)
+        result.append(match.group())
+        cursor = match.end()
+    tail = text[cursor:]
+    if tail and tail.strip():
+        result.append(provider(tail))
+    else:
+        result.append(tail)
+    return "".join(result)
+
+
+def translate_preserving_tokens(text: str, provider: Callable[[str], str]) -> str:
+    """Translate text while guaranteeing that WAKFU tokens survive.
+
+    The normal path keeps surrounding context in one provider call.  If the
+    provider changes a sentinel, the segmented retry avoids sending tokens to
+    the model at all while retaining the same fail-closed validation later in
+    the pipeline.
+    """
+    masked, tokens = mask_tokens(text)
+    try:
+        return restore_tokens(provider(masked), tokens)
+    except VerificationError:
+        return _translate_without_tokens(text, provider)
+
+
 def _conditional_shape(text: str) -> list[str]:
     """Capture WAKFU conditional structure without comparing translated words."""
     shape: list[str] = []
@@ -126,8 +168,7 @@ def resolve_changes(changes: Iterable[Record], *, translations: dict, manual: di
         elif record.key in term_keys: candidate, source = str(term_keys[record.key]), "glossary-key"
         elif record.source in term_values: candidate, source = str(term_values[record.source]), "glossary-value"
         elif argos is not None:
-            masked, tokens = mask_tokens(record.source)
-            candidate, source = restore_tokens(argos(masked), tokens), "argos"
+            candidate, source = translate_preserving_tokens(record.source, argos), "argos"
         else:
             if argos is None:
                 raise TranslationProviderUnavailable("TRANSLATION_PROVIDER_UNAVAILABLE: Argos runtime is required for unresolved NEW/MODIFIED records")
