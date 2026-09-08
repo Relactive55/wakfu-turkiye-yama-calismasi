@@ -17,7 +17,7 @@ from pathlib import Path
 from .ankama_cdn import AnkamaCdnClient
 from .argos_engine import install_locked_model
 from .errors import TranslationProviderUnavailable, VerificationError
-from .localization_pipeline import Record, diff_records, records_from_jar, resolve_changes, validate_proposals
+from .localization_pipeline import Record, diff_records, format_ok, records_from_jar, resolve_changes, validate_proposals
 from .state import atomic_json_write, read_json
 from .update_wakfu_localization import sha1, snapshot
 
@@ -57,6 +57,47 @@ def _write_properties(source: Path, output: Path, proposals: dict[str, str]) -> 
                 identity = f"{info.filename}:{key}#{occurrence[marker]}"
                 result.append(f"{key}={proposals.get(identity, value)}{newline}")
             target.writestr(info.filename, "".join(result).encode("utf-8"))
+
+
+def coalesce_proposals_by_key(records: list[Record], proposals: dict[str, str]) -> dict[str, str]:
+    """Choose one safe translation for duplicate key occurrences.
+
+    WAKFU ships both a normally-cased properties file and a lower-cased
+    ``*_cleaned`` copy.  The same key can therefore receive harmless casing or
+    whitespace differences from a machine-translation pass.  When the source
+    occurrences are equivalent ignoring case/outer whitespace, prefer the
+    normal properties entry and require that value to remain format-valid for
+    every occurrence.  Truly different source strings still fail closed.
+    """
+    grouped: dict[str, list[Record]] = {}
+    for record in records:
+        grouped.setdefault(record.key, []).append(record)
+
+    by_key: dict[str, str] = {}
+    for key, group in grouped.items():
+        ordered = sorted(group, key=lambda item: (item.entry != "texts_en.properties", item.identity))
+        candidates: list[str] = []
+        for record in ordered:
+            if record.identity not in proposals:
+                raise VerificationError("MISSING_PROPOSAL: " + record.identity)
+            value = proposals[record.identity]
+            if value not in candidates:
+                candidates.append(value)
+        if len(candidates) == 1:
+            by_key[key] = candidates[0]
+            continue
+
+        equivalent_sources = len({record.source.strip().casefold() for record in group}) == 1
+        if equivalent_sources:
+            for candidate in candidates:
+                if all(format_ok(record.source, candidate) for record in group):
+                    by_key[key] = candidate
+                    break
+            else:
+                raise VerificationError(f"DUPLICATE_PROPOSAL_FORMAT_CONFLICT: {key}")
+            continue
+        raise VerificationError(f"DUPLICATE_PROPOSAL_CONFLICT: {key}")
+    return by_key
 
 
 def build_provider_unavailable_report(
@@ -197,13 +238,7 @@ def run(
             return provider_stop("ARGOS_TRANSLATION_RUNTIME_UNAVAILABLE")
         validate_proposals(diff=delta, proposals=proposals, baseline_translations={r.identity: r.source for r in before})
 
-        by_key: dict[str, str] = {}
-        for record in delta["NEW"] + delta["MODIFIED"]:
-            value = proposals[record.identity]
-            previous = by_key.get(record.key)
-            if previous is not None and previous != value:
-                raise VerificationError(f"DUPLICATE_PROPOSAL_CONFLICT: {record.key}")
-            by_key[record.key] = value
+        by_key = coalesce_proposals_by_key(delta["NEW"] + delta["MODIFIED"], proposals)
         for key, value in by_key.items():
             if key not in manual:
                 translations[key] = value
