@@ -60,3 +60,7 @@ Görevler, başarımlar, açıklamalar, arayüz metinleri ve diğer içerikler i
 **WAKFU Türkçe Yama Kurulum Aracı 6.5.11**
 
 Güncel sürümü projenin GitHub Releases sayfasından indirebilirsiniz.
+
+### GÜVENLİ DAĞITIM
+
+Kurulum EXE'si, Türkçe yama paketleri ve doğrulama dosyaları yalnızca bu projenin GitHub Releases varlıkları olarak yayımlanır. Harici dosya barındırıcıları, kısaltılmış bağlantılar ve yönlendirme servisleri kullanılmaz.

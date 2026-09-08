@@ -187,19 +187,46 @@ jobs:
         run: python -m venv "$RUNNER_TEMP/argos-venv"
       - name: Install exact translation runtime
         run: "$RUNNER_TEMP/argos-venv/bin/python -m pip install --disable-pip-version-check -r requirements-translation.txt"
-      - name: Download and verify locked Argos model
+      - name: Download and verify locked Argos model from GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          "$RUNNER_TEMP/argos-venv/bin/python" - "$RUNNER_TEMP/translate-en_tr-1_5.argosmodel" <<'PY'
-          import hashlib, json, sys, urllib.request
-          from pathlib import Path
-          lock = json.loads(Path("automation/model-lock.json").read_text(encoding="utf-8"))
-          target = Path(sys.argv[1])
-          request = urllib.request.Request(lock["url"], headers={"User-Agent": "WakfuTurkceCeviri/production-pr"})
-          with urllib.request.urlopen(request, timeout=180) as response, target.open("wb") as output:
-              while chunk := response.read(1024 * 1024): output.write(chunk)
+          set -euo pipefail
+          target="$RUNNER_TEMP/translate-en_tr-1_5.argosmodel"
+          release_json="$RUNNER_TEMP/argos-release.json"
+          gh release view runtime-argos-1.5 --repo "$GITHUB_REPOSITORY" \
+            --json isDraft,isPrerelease,tagName,assets > "$release_json"
+          "$RUNNER_TEMP/argos-venv/bin/python" - "$release_json" <<'PY'
+          import json
+          import pathlib
+          import sys
+
+          lock = json.loads(pathlib.Path("automation/model-lock.json").read_text(encoding="utf-8"))
+          expected_repo = "Relactive55/wakfu-turkiye-yama-calismasi"
+          expected_tag = "runtime-argos-1.5"
+          expected_asset = "wakfu-translate-en_tr-1_5.argosmodel"
+          expected_url = f"https://github.com/{expected_repo}/releases/download/{expected_tag}/{expected_asset}"
+          if lock.get("release_tag") != expected_tag or lock.get("asset_name") != expected_asset:
+              raise SystemExit("model-lock.json release coordinates are not approved")
+          if lock.get("url") != expected_url or lock.get("sha256", "").lower() != "2d553a00880a0c21dea5b1c375535659e6bf18c9bf2ce9847c2a2fd2ff50316a":
+              raise SystemExit("model-lock.json is not the approved GitHub-hosted translate-en_tr 1.5 lock")
+          release = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+          if release.get("isDraft") or release.get("isPrerelease") or release.get("tagName") != expected_tag:
+              raise SystemExit("Argos model Release is not a stable, expected Release")
+          if expected_asset not in {item.get("name") for item in release.get("assets", [])}:
+              raise SystemExit("Argos model asset is missing from the expected GitHub Release")
+          PY
+          "$RUNNER_TEMP/argos-venv/bin/python" -c 'import pathlib,sys; p=pathlib.Path(sys.argv[1]); p.unlink(missing_ok=True)' "$target"
+          gh release download runtime-argos-1.5 --repo "$GITHUB_REPOSITORY" \
+            --pattern 'wakfu-translate-en_tr-1_5.argosmodel' --output "$target" --clobber
+          "$RUNNER_TEMP/argos-venv/bin/python" - "$target" <<'PY'
+          import hashlib, json, pathlib, sys
+          lock = json.loads(pathlib.Path("automation/model-lock.json").read_text(encoding="utf-8"))
+          target = pathlib.Path(sys.argv[1])
           digest = hashlib.sha256(target.read_bytes()).hexdigest()
-          if target.stat().st_size != lock["size_bytes"] or digest.lower() != lock["sha256"].lower():
+          if target.stat().st_size != int(lock["size_bytes"]) or digest.lower() != lock["sha256"].lower():
               raise SystemExit("ARGOS_MODEL_VERIFICATION_FAILED")
+          print(f"ARGOS_MODEL_OK|{target.stat().st_size}|{digest}")
           PY
       - name: Build and validate production candidate
         run: |
@@ -278,29 +305,44 @@ jobs:
         run: python -m venv "$RUNNER_TEMP/argos-venv"
       - name: Install exact translation runtime
         run: "$RUNNER_TEMP/argos-venv/bin/python -m pip install --disable-pip-version-check -r requirements-translation.txt"
-      - name: Download and verify the locked Argos model
+      - name: Download and verify the locked Argos model from GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          "$RUNNER_TEMP/argos-venv/bin/python" - "$RUNNER_TEMP/translate-en_tr-1_5.argosmodel" <<'PY'
-          import hashlib
+          set -euo pipefail
+          target="$RUNNER_TEMP/translate-en_tr-1_5.argosmodel"
+          release_json="$RUNNER_TEMP/argos-release.json"
+          gh release view runtime-argos-1.5 --repo "$GITHUB_REPOSITORY" \
+            --json isDraft,isPrerelease,tagName,assets > "$release_json"
+          "$RUNNER_TEMP/argos-venv/bin/python" - "$release_json" <<'PY'
           import json
+          import pathlib
           import sys
-          import urllib.request
-          from pathlib import Path
 
-          lock = json.loads(Path("automation/model-lock.json").read_text(encoding="utf-8"))
-          target = Path(sys.argv[1])
-          request = urllib.request.Request(
-              lock["url"],
-              headers={"User-Agent": "WakfuTurkceCeviri/test-pr-pipeline"},
-          )
-          with urllib.request.urlopen(request, timeout=180) as response, target.open("wb") as output:
-              while True:
-                  chunk = response.read(1024 * 1024)
-                  if not chunk:
-                      break
-                  output.write(chunk)
+          lock = json.loads(pathlib.Path("automation/model-lock.json").read_text(encoding="utf-8"))
+          expected_repo = "Relactive55/wakfu-turkiye-yama-calismasi"
+          expected_tag = "runtime-argos-1.5"
+          expected_asset = "wakfu-translate-en_tr-1_5.argosmodel"
+          expected_url = f"https://github.com/{expected_repo}/releases/download/{expected_tag}/{expected_asset}"
+          if lock.get("release_tag") != expected_tag or lock.get("asset_name") != expected_asset:
+              raise SystemExit("model-lock.json release coordinates are not approved")
+          if lock.get("url") != expected_url or lock.get("sha256", "").lower() != "2d553a00880a0c21dea5b1c375535659e6bf18c9bf2ce9847c2a2fd2ff50316a":
+              raise SystemExit("model-lock.json is not the approved GitHub-hosted translate-en_tr 1.5 lock")
+          release = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+          if release.get("isDraft") or release.get("isPrerelease") or release.get("tagName") != expected_tag:
+              raise SystemExit("Argos model Release is not a stable, expected Release")
+          if expected_asset not in {item.get("name") for item in release.get("assets", [])}:
+              raise SystemExit("Argos model asset is missing from the expected GitHub Release")
+          PY
+          "$RUNNER_TEMP/argos-venv/bin/python" -c 'import pathlib,sys; p=pathlib.Path(sys.argv[1]); p.unlink(missing_ok=True)' "$target"
+          gh release download runtime-argos-1.5 --repo "$GITHUB_REPOSITORY" \
+            --pattern 'wakfu-translate-en_tr-1_5.argosmodel' --output "$target" --clobber
+          "$RUNNER_TEMP/argos-venv/bin/python" - "$target" <<'PY'
+          import hashlib, json, pathlib, sys
+          lock = json.loads(pathlib.Path("automation/model-lock.json").read_text(encoding="utf-8"))
+          target = pathlib.Path(sys.argv[1])
           digest = hashlib.sha256(target.read_bytes()).hexdigest()
-          if target.stat().st_size != lock["size_bytes"] or digest.lower() != lock["sha256"].lower():
+          if target.stat().st_size != int(lock["size_bytes"]) or digest.lower() != lock["sha256"].lower():
               raise SystemExit("ARGOS_MODEL_VERIFICATION_FAILED")
           print(f"ARGOS_MODEL_OK|{target.stat().st_size}|{digest}")
           PY
