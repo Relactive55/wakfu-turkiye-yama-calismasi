@@ -37,7 +37,11 @@ public static class WakfuFastSearch {
             "content.8.748","content.8.5355","content.8.1915","content.8.1916",
             "content.15.2175","content.15.11955","content.15.15865","content.15.19799",
             "content.15.24267","content.15.27097","content.15.27098","content.15.27099",
-            "content.15.27110","content.15.29612","content.15.31167"};
+            "content.15.27110","content.15.29612","content.15.31167",
+            "content.15.18628","content.15.18629","content.15.18630","content.15.19056",
+            "content.15.20020","content.15.20021","content.15.22385","content.15.24027",
+            "content.15.24081","content.15.24845","content.15.24846","content.15.25103",
+            "content.15.32542","content.15.32543"};
         for(int i=0;i<keys.Length;i++) if(keys[i]!="content.15.0" && !translatedStates.Contains(keys[i]) && ProtectedKey.IsMatch(keys[i]??"") && !String.IsNullOrWhiteSpace(english[i])) names.Add(english[i].Trim());
         names.Add("Canoon");names.Add("Moon-Canoon");
         var result=new string[names.Count];names.CopyTo(result);return result;
@@ -768,7 +772,11 @@ function Test-IsTranslatableInventoryUiKey([string]$key){
     return ($key-in@(
         'content.15.2175','content.15.11955','content.15.15865','content.15.19799',
         'content.15.24267','content.15.27097','content.15.27098','content.15.27099',
-        'content.15.27110','content.15.29612','content.15.31167'
+        'content.15.27110','content.15.29612','content.15.31167',
+        'content.15.18628','content.15.18629','content.15.18630','content.15.19056',
+        'content.15.20020','content.15.20021','content.15.22385','content.15.24027',
+        'content.15.24081','content.15.24845','content.15.24846','content.15.25103',
+        'content.15.32542','content.15.32543'
     ))
 }
 

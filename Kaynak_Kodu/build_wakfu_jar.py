@@ -13,6 +13,7 @@ from wakfu_audit import (
     VISIBLE_WORLD_LABEL_PREFIXES,
     category,
     format_ok,
+    is_translatable_inventory_name,
     is_protected_key,
 )
 
@@ -96,7 +97,7 @@ def rewrite_properties(data, translations, term_keys, term_values, phrases, manu
         if (
             (
                 key.startswith(("content.3.", "content.8.", "content.15."))
-                and key not in REVIEWED_TRANSLATABLE_NAME_KEYS
+                and not is_translatable_inventory_name(key, source)
             )
             or key == "content.6.1049"
         ):
@@ -110,6 +111,7 @@ def rewrite_properties(data, translations, term_keys, term_values, phrases, manu
         allow_intrinsic_override = (
             key in manual
             or key in term_keys
+            or is_translatable_inventory_name(key, source)
             or (
                 key in MANUAL_PROTECTED_TRANSLATION_KEYS
                 and (key in manual or key in term_keys or key in translations)
@@ -119,7 +121,12 @@ def rewrite_properties(data, translations, term_keys, term_values, phrases, manu
             source in term_values
             and key.startswith(VISIBLE_WORLD_LABEL_PREFIXES)
         )
-        allow_value_override = key in manual or key in term_keys or source_term_forced
+        allow_value_override = (
+            key in manual
+            or key in term_keys
+            or source_term_forced
+            or is_translatable_inventory_name(key, source)
+        )
         if (
             (is_protected_key(key) and not allow_intrinsic_override)
             or (protected_value and not allow_value_override)
