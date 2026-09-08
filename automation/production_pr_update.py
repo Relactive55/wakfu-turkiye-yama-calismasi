@@ -16,8 +16,8 @@ from pathlib import Path
 
 from .ankama_cdn import AnkamaCdnClient
 from .argos_engine import install_locked_model
-from .errors import VerificationError
-from .localization_pipeline import diff_records, records_from_jar, resolve_changes, validate_proposals
+from .errors import TranslationProviderUnavailable, VerificationError
+from .localization_pipeline import Record, diff_records, records_from_jar, resolve_changes, validate_proposals
 from .state import atomic_json_write, read_json
 from .update_wakfu_localization import sha1, snapshot
 
@@ -59,7 +59,54 @@ def _write_properties(source: Path, output: Path, proposals: dict[str, str]) -> 
             target.writestr(info.filename, "".join(result).encode("utf-8"))
 
 
-def run(*, output_dir: Path, model_path: Path | None, model_lock: Path | None) -> dict[str, object]:
+def build_provider_unavailable_report(
+    *,
+    game_version: str,
+    source_sha1: str,
+    diff: dict[str, int],
+    unresolved: list[Record],
+    reason_code: str,
+) -> dict[str, object]:
+    """Describe a safe, non-publishing stop when Argos cannot be used.
+
+    The report intentionally contains identities and counts only.  It never
+    copies upstream source text or an exception (which could contain a local
+    path) into an issue, PR, or artifact.  Most importantly, this result is
+    emitted before any project state or translation-memory file is written.
+    """
+    return {
+        "status": "PROVIDER_UNAVAILABLE",
+        "provider": "argos",
+        "reason_code": reason_code,
+        "game_version": game_version,
+        "source_sha1": source_sha1,
+        "diff": diff,
+        "unresolved_count": len(unresolved),
+        "unresolved_keys": [record.identity for record in unresolved[:100]],
+        "removed_report_only": True,
+        "validation": "SKIPPED_PROVIDER_UNAVAILABLE",
+        "build": "SKIPPED_PROVIDER_UNAVAILABLE",
+        "state_written_in_candidate_branch": False,
+        "translation_memory_changed": False,
+        "release_created": False,
+    }
+
+
+def _write_report(output_dir: Path, report: dict[str, object]) -> dict[str, object]:
+    output_dir.mkdir(parents=True, exist_ok=True)
+    (output_dir / "production_update_report.json").write_text(
+        json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
+    return report
+
+
+def run(
+    *,
+    output_dir: Path,
+    model_path: Path | None,
+    model_lock: Path | None,
+    allow_provider_unavailable: bool = False,
+) -> dict[str, object]:
     state = read_json(STATE_PATH, default=None)
     if not isinstance(state, dict) or not isinstance(state.get("baseline"), str):
         raise VerificationError("BASELINE_REQUIRED: approved baseline state is missing")
@@ -94,8 +141,33 @@ def run(*, output_dir: Path, model_path: Path | None, model_lock: Path | None) -
         translate = None
         if unresolved:
             if model_path is None or model_lock is None:
-                raise VerificationError("TRANSLATION_PROVIDER_UNAVAILABLE: Argos model is required for unresolved production records")
-            translate = install_locked_model(model_path, model_lock)
+                if allow_provider_unavailable:
+                    return _write_report(
+                        output_dir,
+                        build_provider_unavailable_report(
+                            game_version=version,
+                            source_sha1=entry.sha1,
+                            diff=counts,
+                            unresolved=unresolved,
+                            reason_code="ARGOS_INPUT_MISSING",
+                        ),
+                    )
+                raise TranslationProviderUnavailable("TRANSLATION_PROVIDER_UNAVAILABLE: Argos model is required for unresolved production records")
+            try:
+                translate = install_locked_model(model_path, model_lock)
+            except Exception:
+                if not allow_provider_unavailable:
+                    raise
+                return _write_report(
+                    output_dir,
+                    build_provider_unavailable_report(
+                        game_version=version,
+                        source_sha1=entry.sha1,
+                        diff=counts,
+                        unresolved=unresolved,
+                        reason_code="ARGOS_RUNTIME_OR_MODEL_UNAVAILABLE",
+                    ),
+                )
         proposals, origins = resolve_changes(delta["NEW"] + delta["MODIFIED"], translations=translations, manual=manual, terms=terms, argos=translate)
         validate_proposals(diff=delta, proposals=proposals, baseline_translations={r.identity: r.source for r in before})
 
@@ -145,8 +217,7 @@ def run(*, output_dir: Path, model_path: Path | None, model_lock: Path | None) -
             "state_written_in_candidate_branch": True,
             "baseline": str(snapshot_path.relative_to(ROOT)).replace("\\", "/"),
         }
-        (output_dir / "production_update_report.json").write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-        return report
+        return _write_report(output_dir, report)
 
 
 def main() -> None:
@@ -154,8 +225,24 @@ def main() -> None:
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--model-path", type=Path)
     parser.add_argument("--model-lock", type=Path)
+    parser.add_argument(
+        "--allow-provider-unavailable",
+        action="store_true",
+        help="Stop safely without state/PR/release writes when Argos cannot be loaded",
+    )
     args = parser.parse_args()
-    print(json.dumps(run(output_dir=args.output_dir, model_path=args.model_path, model_lock=args.model_lock), ensure_ascii=False, sort_keys=True))
+    print(
+        json.dumps(
+            run(
+                output_dir=args.output_dir,
+                model_path=args.model_path,
+                model_lock=args.model_lock,
+                allow_provider_unavailable=args.allow_provider_unavailable,
+            ),
+            ensure_ascii=False,
+            sort_keys=True,
+        )
+    )
 
 
 if __name__ == "__main__":
