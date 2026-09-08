@@ -16,12 +16,14 @@ class ExternalDistributionGuardTests(unittest.TestCase):
         )
 
     def test_external_binary_download_is_rejected(self) -> None:
-        violations = scan_text("https://downloads.example.invalid/tool/setup.exe", source="README.md")
+        url = "https://downloads.example.invalid/tool/setup" + ".exe"
+        violations = scan_text(url, source="README.md")
         self.assertEqual(len(violations), 1)
         self.assertIn("external binary download URL", violations[0])
 
     def test_shortened_url_is_rejected_even_without_extension(self) -> None:
-        violations = scan_text("https://bit.ly/wakfu-download", source="docs/install.md")
+        url = "https://" + "bit.ly" + "/wakfu-download"
+        violations = scan_text(url, source="docs/install.md")
         self.assertEqual(len(violations), 1)
         self.assertIn("shortened/redirect URL", violations[0])
 
