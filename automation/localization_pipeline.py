@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Callable, Iterable
 
 from .errors import TranslationProviderUnavailable, VerificationError
+from .translation_quality import quality_problem
 
 ENTRIES = ("texts_en.properties", "texts_en_cleaned.properties")
 # TOKEN is used when text is sent through Argos.  A complete conditional is
@@ -24,6 +25,7 @@ _ORDINARY_TOKEN = re.compile(
     r"%[A-Za-z_][A-Za-z0-9_.-]*%"
 )
 _SIMPLE_CONDITIONAL = re.compile(r"\{\[[^\]]+\]\?(?:s|es)?:\}")
+_CONDITIONAL_MARKER = re.compile(r"\{\[[^\]]+\]\?(?:[^{}]|\\.)*\}")
 
 
 @dataclass(frozen=True)
@@ -142,12 +144,24 @@ def _repair_simple_conditional_boundaries(source: str, candidate: str) -> str:
     """
     result = candidate
     for marker in _SIMPLE_CONDITIONAL.findall(source):
+        header = marker.split("?", 1)[0] + "?"
+        trimmed_result = result.rstrip()
+        has_same_suffix_header = any(
+            match.group().startswith(header) and match.end() == len(trimmed_result)
+            for match in _CONDITIONAL_MARKER.finditer(trimmed_result)
+        )
+        has_same_prefix_header = any(
+            match.group().startswith(header) and match.start() == len(result) - len(result.lstrip())
+            for match in _CONDITIONAL_MARKER.finditer(result)
+        )
         if source.rstrip().endswith(marker) and not result.rstrip().endswith(marker):
-            trailing = result[len(result.rstrip()):]
-            result = result.rstrip() + marker + trailing
+            if not has_same_suffix_header:
+                trailing = result[len(result.rstrip()):]
+                result = result.rstrip() + marker + trailing
         elif source.lstrip().startswith(marker) and not result.lstrip().startswith(marker):
-            leading = result[: len(result) - len(result.lstrip())]
-            result = leading + marker + result.lstrip()
+            if not has_same_prefix_header:
+                leading = result[: len(result) - len(result.lstrip())]
+                result = leading + marker + result.lstrip()
     return result
 
 
@@ -269,6 +283,15 @@ def resolve_changes(changes: Iterable[Record], *, translations: dict, manual: di
             candidate = _repair_simple_conditional_boundaries(record.source, candidate)
         if not candidate.strip() or not format_ok(record.source, candidate):
             raise VerificationError("translation candidate fails token validation: " + record.identity)
+        # Manual repairs are reviewed source-of-truth entries.  Every other
+        # provider (Argos, memory, or glossary) must also pass a semantic
+        # smoke-test so half-English output cannot reach a release PR.
+        if source != "manual":
+            problem = quality_problem(record.key, record.source, candidate)
+            if problem:
+                raise VerificationError(
+                    f"translation quality guard: {record.identity}: {problem}"
+                )
         output[record.identity], origin[record.identity] = candidate, source
     return output, origin
 

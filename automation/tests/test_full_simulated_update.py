@@ -178,6 +178,10 @@ def run_simulation(model_path: Path, model_lock: Path, output_root: Path) -> dic
     # files above remain untouched and are still loaded as the first source.
     translations["sim.tm"] = "Yeni [#1] sayısı"
     manual["sim.manual"] = "Hoş geldin kahraman."
+    # Markup-bearing labels are reviewed just like production UI labels; the
+    # quality gate must not accept the fixture model's occasional English
+    # residue (for example ``<b>Damage dealt</b>``).
+    manual["sim.tag"] = "<b>Hasar verildi</b>"
     terms[1]["Damage"] = "Hasar"
 
     translator = install_locked_model(model_path, model_lock)
