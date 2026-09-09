@@ -420,6 +420,12 @@ REVIEWED_TRANSLATABLE_NAME_KEYS = {
     "content.15.25103",  # Battlefield Rules: Free-for-All
     "content.15.32542",  # Ancestral Souvenir
     "content.15.32543",  # Ancestral Souvenir
+    "content.15.2040",   # Helmetofu
+    "content.15.9481",   # Royal Tofu Helmet
+    "content.15.9793",   # Moonstone
+    "content.15.17851",  # Part of the Headpiece of Arrrghhh
+    "content.15.22146",  # Used Experience Potion
+    "content.15.25012",  # Iop Whistle
     "content.38.5",      # Summons (creature family label)
     "content.38.518",    # Guild of Hunters
     "content.61.517",    # Guild of Hunters
