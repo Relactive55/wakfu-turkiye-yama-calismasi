@@ -110,6 +110,45 @@ static class WakfuSetupApp {
     static string StateText(Dictionary<string,object> state,string name){object value;return state!=null&&state.TryGetValue(name,out value)&&value!=null?Convert.ToString(value):"";}
     static bool SameGameDirectory(string first,string second){try{return String.Equals(Path.GetFullPath(first).TrimEnd(Path.DirectorySeparatorChar,Path.AltDirectorySeparatorChar),Path.GetFullPath(second).TrimEnd(Path.DirectorySeparatorChar,Path.AltDirectorySeparatorChar),StringComparison.OrdinalIgnoreCase);}catch{return false;}}
     static int ComparePatchVersions(string left,string right){string[] a=left.Split('.'),b=right.Split('.');for(int i=0;i<4;i++){long x=Int64.Parse(a[i],System.Globalization.CultureInfo.InvariantCulture),y=Int64.Parse(b[i],System.Globalization.CultureInfo.InvariantCulture);if(x!=y)return x<y?-1:1;}return 0;}
+    static bool IsSha256(string value){return Regex.IsMatch(value??"","^[A-Fa-f0-9]{64}$",RegexOptions.CultureInvariant);}
+    static bool IsGameVersionFormat(string value){return Regex.IsMatch(value??"","^[0-9]+(?:\\.[0-9]+){1,10}(?:_[0-9]+(?:\\.[0-9]+){1,10})?$",RegexOptions.CultureInvariant);}
+    static bool FileHashEquals(string path,string expected){try{return File.Exists(path)&&IsSha256(expected)&&String.Equals(HashFile(path),expected,StringComparison.OrdinalIgnoreCase);}catch{return false;}}
+    static bool FilesHaveSameHash(string first,string second){try{return File.Exists(first)&&File.Exists(second)&&String.Equals(HashFile(first),HashFile(second),StringComparison.OrdinalIgnoreCase);}catch{return false;}}
+    static bool IsInstalledPatchStateValid(string game,Dictionary<string,object> state){
+        if(state==null||!SameGameDirectory(StateText(state,"game_dir"),game)||!Regex.IsMatch(StateText(state,"patch_version"),"^[0-9]{4}\\.[0-9]{2}\\.[0-9]{2}\\.[0-9]+$",RegexOptions.CultureInvariant)||!IsSha256(StateText(state,"sha256")))return false;
+        var files=GameFiles(game);string hash=StateText(state,"sha256");return FileHashEquals(files["i18n_en"],hash)&&FileHashEquals(files["i18n"],hash);
+    }
+    static bool IsOriginalI18nStateValid(string game,Dictionary<string,object> state){
+        if(state==null||!SameGameDirectory(StateText(state,"game_dir"),game))return false;string expected=StateText(state,"source_i18n_sha256");if(!IsSha256(expected))return false;
+        var files=GameFiles(game);return FileHashEquals(files["i18n_en"],expected)&&FileHashEquals(files["i18n"],expected);
+    }
+    static bool IsLegacyPatchedInstallation(string game){
+        var state=ReadInstallState();var files=GameFiles(game);return StateMatchesPatched(state,game,"i18n_en",files["i18n_en"])&&StateMatchesPatched(state,game,"i18n",files["i18n"]);
+    }
+    static string ReadPropertiesValue(string path,string key){
+        try{if(!File.Exists(path))return "";string pattern=@"^\s*"+Regex.Escape(key)+@"\s*=\s*(.*?)\s*$";foreach(string line in File.ReadAllLines(path,Encoding.UTF8)){Match match=Regex.Match(line,pattern,RegexOptions.CultureInvariant);if(match.Success)return match.Groups[1].Value.Trim();}}catch{}return "";
+    }
+    static string InstalledPatchVersion(string game){
+        var state=ReadInstalledPatchState();return IsInstalledPatchStateValid(game,state)?StateText(state,"patch_version"):"";
+    }
+    static string InstalledGameVersion(string game){
+        var patch=ReadInstalledPatchState();
+        if(IsInstalledPatchStateValid(game,patch)||IsOriginalI18nStateValid(game,patch)){
+            string known=StateText(patch,"game_version");if(IsGameVersionFormat(known))return known;
+        }
+        string release=ReadPropertiesValue(Path.Combine(game,"sentry.properties"),"release");
+        return String.IsNullOrWhiteSpace(release)?"":release;
+    }
+    static bool OriginalGameFiles(string game){
+        var files=GameFiles(game);if(!File.Exists(files["i18n_en"]))return false;
+        var patch=ReadInstalledPatchState();if(IsInstalledPatchStateValid(game,patch))return false;
+        if(IsOriginalI18nStateValid(game,patch))return true;
+        var legacy=ReadInstallState();object raw;var official=legacy!=null&&legacy.TryGetValue("official",out raw)?StringDictionary(raw):null;
+        string expected;bool matchesOfficial=official!=null&&official.TryGetValue("i18n_en",out expected)&&FileHashEquals(files["i18n_en"],expected);
+        if(matchesOfficial){if(!File.Exists(files["i18n"]))return true;return official.TryGetValue("i18n",out expected)&&FileHashEquals(files["i18n"],expected);}
+        string backup=Path.Combine(BackupDir,"i18n_en.jar");if(FilesHaveSameHash(files["i18n_en"],backup)){if(!File.Exists(files["i18n"]))return true;return FilesHaveSameHash(files["i18n"],backup);}
+        return false;
+    }
     static bool IsReleasedPatchInstalled(string game,PatchManifest manifest){
         var state=ReadInstalledPatchState();if(state==null||!SameGameDirectory(StateText(state,"game_dir"),game)||!String.Equals(StateText(state,"patch_version"),manifest.PatchVersion,StringComparison.Ordinal)||!String.Equals(StateText(state,"sha256"),manifest.Sha256,StringComparison.OrdinalIgnoreCase))return false;
         var files=GameFiles(game);return File.Exists(files["i18n_en"])&&File.Exists(files["i18n"])&&String.Equals(HashFile(files["i18n_en"]),manifest.Sha256,StringComparison.OrdinalIgnoreCase)&&String.Equals(HashFile(files["i18n"]),manifest.Sha256,StringComparison.OrdinalIgnoreCase);
@@ -462,37 +501,47 @@ static class WakfuSetupApp {
     }
 
     sealed class SetupForm:Form {
-        TextBox path=new TextBox();Label status=new Label();ComboBox overheadSize=new ComboBox();LatestPatchRelease availableRelease;PatchManifest availableManifest;
+        TextBox path=new TextBox();Label status=new Label();Label gameVersionStatus=new Label();Label patchStatus=new Label();ComboBox overheadSize=new ComboBox();LatestPatchRelease availableRelease;PatchManifest availableManifest;
         string SelectedOverheadProfile(){return overheadSize.SelectedIndex==0?"normal":overheadSize.SelectedIndex==2?"tiny":"small";}
         public SetupForm(){
-            Text="Wakfu Türkçe Yama";Size=new Size(790,340);StartPosition=FormStartPosition.CenterScreen;FormBorderStyle=FormBorderStyle.FixedDialog;MaximizeBox=false;Font=new Font("Segoe UI",10);BackColor=Color.FromArgb(38,38,42);ForeColor=Color.WhiteSmoke;
+            Text="Wakfu Türkçe Yama";Size=new Size(790,390);StartPosition=FormStartPosition.CenterScreen;FormBorderStyle=FormBorderStyle.FixedDialog;MaximizeBox=false;Font=new Font("Segoe UI",10);BackColor=Color.FromArgb(38,38,42);ForeColor=Color.WhiteSmoke;
             var label=new Label{Text="Bulunan/seçilen Wakfu klasörü:"};label.SetBounds(20,28,250,25);path.SetBounds(20,56,420,28);path.Text=FindGame();path.BackColor=Color.FromArgb(54,54,60);path.ForeColor=Color.WhiteSmoke;
             var wakfu=new Button{Text="Wakfu Klasörü Seç",BackColor=Color.FromArgb(65,65,72),ForeColor=Color.WhiteSmoke,FlatStyle=System.Windows.Forms.FlatStyle.Flat};wakfu.SetBounds(585,53,170,33);
             var overheadLabel=new Label{Text="Nick Font Boyutu:"};overheadLabel.SetBounds(20,100,165,27);overheadSize.DropDownStyle=ComboBoxStyle.DropDownList;overheadSize.BackColor=Color.FromArgb(54,54,60);overheadSize.ForeColor=Color.WhiteSmoke;overheadSize.Items.AddRange(new object[]{"Normal (28 / 24)","Küçük (24 / 20)","Çok küçük (20 / 16) — Önerilen"});overheadSize.SetBounds(190,96,300,30);string preferred=ReadOverheadPreference();overheadSize.SelectedIndex=preferred=="normal"?0:preferred=="tiny"?2:1;
             var install=new Button{Text="Türkçe Yamayı Yükle",BackColor=Color.FromArgb(35,120,70),ForeColor=Color.White,FlatStyle=(System.Windows.Forms.FlatStyle)1};install.SetBounds(110,143,245,45);var restore=new Button{Text="Türkçe Yamayı Kaldır / Orijinali Yükle",BackColor=Color.FromArgb(120,95,35),ForeColor=Color.White,FlatStyle=(System.Windows.Forms.FlatStyle)1};restore.SetBounds(375,143,300,45);
             status.Text="Güncellemeler kontrol ediliyor...";status.AutoEllipsis=true;status.SetBounds(20,206,735,25);
-            var version=new Label{Text="EXE v"+System.Diagnostics.FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location).FileVersion,Font=new Font("Segoe UI",9),ForeColor=Color.FromArgb(170,170,175),TextAlign=ContentAlignment.MiddleLeft};version.SetBounds(20,276,180,25);
-            var brand=new Label{Text="Relactive",Font=new Font("Segoe UI",10,FontStyle.Bold|FontStyle.Italic),ForeColor=Color.FromArgb(220,70,70),TextAlign=ContentAlignment.MiddleRight};brand.SetBounds(650,276,105,25);
-            wakfu.Click+=(s,e)=>{using(var d=new FolderBrowserDialog{Description="Doğrudan Wakfu oyun klasörünü seçin"})if(d.ShowDialog()==DialogResult.OK){if(IsWakfu(d.SelectedPath))path.Text=d.SelectedPath;else MessageBox.Show("Seçilen klasör geçerli bir Wakfu klasörü değil. İçinde contents\\i18n\\i18n_en.jar bulunmalıdır.","Geçersiz Wakfu klasörü",MessageBoxButtons.OK,MessageBoxIcon.Warning);}};
+            gameVersionStatus.AutoEllipsis=true;gameVersionStatus.SetBounds(20,232,735,25);
+            patchStatus.AutoEllipsis=true;patchStatus.SetBounds(20,258,735,25);
+            var version=new Label{Text="EXE v"+System.Diagnostics.FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location).FileVersion,Font=new Font("Segoe UI",9),ForeColor=Color.FromArgb(170,170,175),TextAlign=ContentAlignment.MiddleLeft};version.SetBounds(20,318,180,25);
+            var brand=new Label{Text="Relactive",Font=new Font("Segoe UI",10,FontStyle.Bold|FontStyle.Italic),ForeColor=Color.FromArgb(220,70,70),TextAlign=ContentAlignment.MiddleRight};brand.SetBounds(650,318,105,25);
+            RefreshLocalStatus();
+            wakfu.Click+=(s,e)=>{using(var d=new FolderBrowserDialog{Description="Doğrudan Wakfu oyun klasörünü seçin"})if(d.ShowDialog()==DialogResult.OK){if(IsWakfu(d.SelectedPath)){path.Text=d.SelectedPath;RefreshLocalStatus();}else MessageBox.Show("Seçilen klasör geçerli bir Wakfu klasörü değil. İçinde contents\\i18n\\i18n_en.jar bulunmalıdır.","Geçersiz Wakfu klasörü",MessageBoxButtons.OK,MessageBoxIcon.Warning);}};
             overheadSize.SelectedIndexChanged+=(s,e)=>{try{WriteOverheadPreference(SelectedOverheadProfile());}catch{}};
             Shown+=(s,e)=>CheckLatestRelease();
             install.Click+=(s,e)=>InstallAvailableRelease();restore.Click+=(s,e)=>{if(MessageBox.Show("Yalnızca Türkçe yama, font ve arayüz değişiklikleri kaldırılacak; yedekteki resmî oyun dosyaları geri yüklenecek. Devam edilsin mi?","Türkçe yamayı kaldır",MessageBoxButtons.YesNo,MessageBoxIcon.Warning)==DialogResult.Yes)Run(()=>Restore(path.Text),"Türkçe yama kaldırıldı; orijinal oyun dosyaları geri yüklendi.");};
-            Controls.AddRange(new Control[]{label,path,wakfu,overheadLabel,overheadSize,install,restore,status,version,brand});
+            Controls.AddRange(new Control[]{label,path,wakfu,overheadLabel,overheadSize,install,restore,status,gameVersionStatus,patchStatus,version,brand});
         }
-        async void Run(Action action,string ok){try{Enabled=false;UseWaitCursor=true;status.Text="İşlem yapılıyor…";await Task.Run(action);status.Text=ok;MessageBox.Show(ok,"İşlem tamam",MessageBoxButtons.OK,MessageBoxIcon.Information);}catch(Exception ex){MessageBox.Show(ex.Message,"İşlem hatası",MessageBoxButtons.OK,MessageBoxIcon.Error);}finally{UseWaitCursor=false;Enabled=true;}}
+        void RefreshLocalStatus(){
+            try{
+                string game=path.Text.Trim();if(!IsWakfu(game)){gameVersionStatus.Text="Yüklü oyun sürümü: algılanamadı.";patchStatus.Text="Yama durumu: geçerli bir Wakfu klasörü seçilmedi.";return;}
+                string gameVersion=InstalledGameVersion(game);gameVersionStatus.Text="Yüklü oyun sürümü: "+(String.IsNullOrWhiteSpace(gameVersion)?"algılanamadı.":gameVersion);
+                string patch=InstalledPatchVersion(game);if(!String.IsNullOrWhiteSpace(patch))patchStatus.Text="Türkçe yama yüklü: "+patch;else if(IsLegacyPatchedInstallation(game))patchStatus.Text="Türkçe yama yüklü: sürüm bilgisi eski kurulum kaydında yok.";else if(OriginalGameFiles(game))patchStatus.Text="Oyun dosyaları orijinal.";else patchStatus.Text="Yama durumu: tespit edilemedi.";
+            }catch{gameVersionStatus.Text="Yüklü oyun sürümü: okunamadı.";patchStatus.Text="Yama durumu: okunamadı.";}
+        }
+        async void Run(Action action,string ok){try{Enabled=false;UseWaitCursor=true;status.Text="İşlem yapılıyor…";await Task.Run(action);RefreshLocalStatus();status.Text=ok;MessageBox.Show(ok,"İşlem tamam",MessageBoxButtons.OK,MessageBoxIcon.Information);}catch(Exception ex){MessageBox.Show(ex.Message,"İşlem hatası",MessageBoxButtons.OK,MessageBoxIcon.Error);}finally{UseWaitCursor=false;Enabled=true;}}
         sealed class Candidate { internal LatestPatchRelease Release; internal PatchManifest Manifest; }
         void SetReleaseStatus(string text){if(IsDisposed)return;if(InvokeRequired){BeginInvoke((Action)(()=>SetReleaseStatus(text)));return;}status.Text=text;}
         async void CheckLatestRelease(){
             SetReleaseStatus("Güncellemeler kontrol ediliyor...");
-            try{Candidate candidate=await Task.Run(()=>{var release=WakfuReleaseUpdater.GetLatestRelease();return new Candidate{Release=release,Manifest=WakfuReleaseUpdater.GetManifest(release)};});availableRelease=candidate.Release;availableManifest=candidate.Manifest;var installed=ReadInstalledPatchState();string local=StateText(installed,"patch_version");
-                if(!String.IsNullOrWhiteSpace(local)&&Regex.IsMatch(local,"^[0-9]{4}\\.[0-9]{2}\\.[0-9]{2}\\.[0-9]+$")&&ComparePatchVersions(local,availableManifest.PatchVersion)>0){SetReleaseStatus("Yerel yama Release sürümünden daha yeni; geri yükleme yapılmayacak.");return;}
-                if(IsReleasedPatchInstalled(path.Text,availableManifest)){SetReleaseStatus("Yamanız güncel.");return;}
-                SetReleaseStatus("Yeni Türkçe yama bulundu: "+availableManifest.PatchVersion);
+            try{Candidate candidate=await Task.Run(()=>{var release=WakfuReleaseUpdater.GetLatestRelease();return new Candidate{Release=release,Manifest=WakfuReleaseUpdater.GetManifest(release)};});availableRelease=candidate.Release;availableManifest=candidate.Manifest;RefreshLocalStatus();string local=InstalledPatchVersion(path.Text);
+                if(!String.IsNullOrWhiteSpace(local)&&Regex.IsMatch(local,"^[0-9]{4}\\.[0-9]{2}\\.[0-9]{2}\\.[0-9]+$")&&ComparePatchVersions(local,availableManifest.PatchVersion)>0){SetReleaseStatus("Mevcut güncelleme: yerel yama daha yeni ("+local+").");return;}
+                if(IsReleasedPatchInstalled(path.Text,availableManifest)){SetReleaseStatus("Mevcut güncelleme: yamanız güncel ("+availableManifest.PatchVersion+").");return;}
+                SetReleaseStatus("Mevcut güncelleme: yeni Türkçe yama bulundu — "+availableManifest.PatchVersion);
             }catch(Exception ex){SetReleaseStatus(WakfuReleaseUpdater.IsOfflineFailure(ex)?"Güncelleme kontrol edilemedi. İnternet bağlantınızı kontrol edin.":"Güncelleme kontrol edilemedi: "+ex.Message);}
         }
         async void InstallAvailableRelease(){
             if(availableRelease==null||availableManifest==null){SetReleaseStatus("Önce güncelleme kontrolünün tamamlanması gerekiyor.");return;}
-            try{Enabled=false;UseWaitCursor=true;string profile=SelectedOverheadProfile();await Task.Run(()=>InstallReleasedPatch(path.Text,profile,availableRelease,availableManifest,SetReleaseStatus));SetReleaseStatus("Kurulum tamamlandı.");MessageBox.Show("Kurulum tamamlandı.","İşlem tamam",MessageBoxButtons.OK,MessageBoxIcon.Information);}
+            try{Enabled=false;UseWaitCursor=true;string profile=SelectedOverheadProfile();await Task.Run(()=>InstallReleasedPatch(path.Text,profile,availableRelease,availableManifest,SetReleaseStatus));RefreshLocalStatus();SetReleaseStatus("Kurulum tamamlandı: Türkçe yama "+availableManifest.PatchVersion+".");MessageBox.Show("Kurulum tamamlandı.","İşlem tamam",MessageBoxButtons.OK,MessageBoxIcon.Information);}
             catch(Exception ex){SetReleaseStatus("Kurulum başarısız; mevcut yama korundu.");MessageBox.Show(ex.Message,"İşlem hatası",MessageBoxButtons.OK,MessageBoxIcon.Error);}finally{UseWaitCursor=false;Enabled=true;}
         }
     }
