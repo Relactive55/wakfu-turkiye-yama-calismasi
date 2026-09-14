@@ -13,11 +13,11 @@ import re
 import unicodedata
 
 
-# The same format atoms used by the properties validator are hidden while the
-# natural-language portion is inspected.  This keeps placeholders and XML out
-# of the English-residue check.
+# Ordinary format atoms are hidden while the natural-language portion is
+# inspected.  Conditional *branch text* is intentionally not opaque: it is
+# player-visible prose and must go through the same English-residue gate.
 _FORMAT_ATOM = re.compile(
-    r"\{\[[^\]]+\]\?(?:[^{}]|\\.)*\}|\\[ntr]|<[^>]*>|"
+    r"\\[ntr]|<[^>]*>|"
     r"\[(?:[#$=,<>/-][^\]]*|\d+[A-Za-z0-9*!<>=.$-]*|[A-Za-z][A-Za-z0-9_.-]{0,31})\]|"
     r"%[A-Za-z_][A-Za-z0-9_.-]*%"
 )
@@ -31,7 +31,9 @@ ENGLISH_RESIDUE_WORDS = frozenset(
     {
         "age",
         "archmonster",
+        "active",
         "ascending",
+        "available",
         "bridge",
         "building",
         "cap",
@@ -42,6 +44,8 @@ ENGLISH_RESIDUE_WORDS = frozenset(
         "damage",
         "dead",
         "descending",
+        "disabled",
+        "enabled",
         "entity",
         "environmental",
         "extreme",
@@ -61,6 +65,7 @@ ENGLISH_RESIDUE_WORDS = frozenset(
         "monster",
         "most",
         "newest",
+        "no",
         "oldest",
         "occupied",
         "paddock",
@@ -81,6 +86,7 @@ ENGLISH_RESIDUE_WORDS = frozenset(
         "sector",
         "starfish",
         "stool",
+        "yes",
         "vomit",
     }
 )
@@ -109,11 +115,40 @@ _COMMON_TURKISH_WORDS = frozenset(
 
 
 def _visible(text: str) -> str:
-    """Remove syntax and normalize Unicode for language-only checks."""
-    text = _FORMAT_ATOM.sub(" ", text)
-    text = re.sub(r"\\[ntr]", " ", text)
-    text = re.sub(r"<[^>]*>", " ", text)
-    return unicodedata.normalize("NFKC", text).replace("’", "'")
+    """Remove syntax while retaining words inside conditional branches."""
+    visible: list[str] = []
+    conditional_stack: list[bool] = []
+    index = 0
+    while index < len(text):
+        if text.startswith("{[", index):
+            header_end = text.find("]?", index + 2)
+            if header_end >= 0:
+                visible.append(" ")
+                conditional_stack.append(False)
+                index = header_end + 2
+                continue
+        char = text[index]
+        if conditional_stack and char == ":" and (index == 0 or text[index - 1] != "\\"):
+            # The first unescaped colon owned by the current conditional is
+            # syntax; later colons in its branch remain ordinary prose.
+            if not conditional_stack[-1]:
+                conditional_stack[-1] = True
+                visible.append(" ")
+                index += 1
+                continue
+        if conditional_stack and char == "}":
+            conditional_stack.pop()
+            visible.append(" ")
+            index += 1
+            continue
+        atom = _FORMAT_ATOM.match(text, index)
+        if atom:
+            visible.append(" ")
+            index = atom.end()
+            continue
+        visible.append(char)
+        index += 1
+    return unicodedata.normalize("NFKC", "".join(visible)).replace("’", "'")
 
 
 def _words(text: str) -> list[str]:

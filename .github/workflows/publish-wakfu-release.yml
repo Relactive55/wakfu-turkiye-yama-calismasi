@@ -65,7 +65,7 @@ jobs:
           # Merge commits need -m so the changed localization files are
           # compared against their first parent instead of appearing empty.
           changed=$(git diff-tree --no-commit-id --name-only -r -m "${GITHUB_SHA}" | sort -u)
-          if ! printf '%s\n' "${changed}" | grep -Eq '^(Ceviri_Verileri/wakfu_tr_ceviri\.json|Ceviri_Verileri/manual_repairs_v23\.json|automation/state\.json|automation/snapshots/)'; then
+          if ! printf '%s\n' "${changed}" | grep -Eq '^(Ceviri_Verileri/wakfu_tr_ceviri\.json|Ceviri_Verileri/manual_repairs_v23\.json|Ceviri_Verileri/terim_duzeltmeleri\.json|Ceviri_Verileri/translation_memory_sources\.json|automation/state\.json|automation/snapshots/)'; then
             printf 'should_publish=false\n' >> "${GITHUB_OUTPUT}"
             printf 'game_version=skip\npatch_version=skip\ntest_fixture=false\n' >> "${GITHUB_OUTPUT}"
             echo "NO_LOCALIZATION_CHANGE"

@@ -18,7 +18,16 @@ from pathlib import Path
 from .ankama_cdn import AnkamaCdnClient
 from .argos_engine import install_locked_model
 from .errors import TranslationProviderUnavailable, VerificationError
-from .localization_pipeline import Record, diff_records, format_ok, records_from_jar, resolve_changes, validate_proposals
+from .localization_pipeline import (
+    Record,
+    diff_records,
+    format_ok,
+    memory_source_matches,
+    records_from_jar,
+    resolve_changes,
+    source_fingerprint,
+    validate_proposals,
+)
 from .state import atomic_json_write, read_json
 from .update_wakfu_localization import sha1, snapshot
 
@@ -27,6 +36,9 @@ STATE_PATH = ROOT / "automation" / "state.json"
 TRANSLATION_PATH = ROOT / "Ceviri_Verileri" / "wakfu_tr_ceviri.json"
 MANUAL_PATH = ROOT / "Ceviri_Verileri" / "manual_repairs_v23.json"
 TERMS_PATH = ROOT / "Ceviri_Verileri" / "terim_duzeltmeleri.json"
+# Kept separate from the human-facing translation map so old key-only entries
+# cannot be silently reused after an upstream key is repurposed.
+MEMORY_SOURCES_PATH = ROOT / "Ceviri_Verileri" / "translation_memory_sources.json"
 
 
 # The cleaned upstream properties copy is lower-cased as a preprocessing step.
@@ -233,10 +245,23 @@ def run(
             return {"status": "NO_CHANGES", "game_version": version, "source_sha1": entry.sha1, "diff": counts}
 
         translations = _load(TRANSLATION_PATH)
+        memory_sources = _load(MEMORY_SOURCES_PATH) if MEMORY_SOURCES_PATH.is_file() else {}
+        if not isinstance(memory_sources, dict):
+            raise VerificationError("translation memory source metadata is invalid")
         manual = _load(MANUAL_PATH)
         glossary = _load(TERMS_PATH)
         terms = (glossary.get("keys", {}), glossary.get("values", {}), glossary.get("phrases", {}))
-        unresolved = [record for record in delta["NEW"] + delta["MODIFIED"] if record.key not in manual and not translations.get(record.key) and record.key not in terms[0] and record.source not in terms[1]]
+        unresolved = [
+            record
+            for record in delta["NEW"] + delta["MODIFIED"]
+            if record.key not in manual
+            and not (
+                translations.get(record.key)
+                and memory_source_matches(record, memory_sources)
+            )
+            and record.key not in terms[0]
+            and record.source not in terms[1]
+        ]
         translate = None
 
         def provider_stop(reason_code: str) -> dict[str, object]:
@@ -273,7 +298,14 @@ def run(
 
             translate = guarded_translate
         try:
-            proposals, origins = resolve_changes(delta["NEW"] + delta["MODIFIED"], translations=translations, manual=manual, terms=terms, argos=translate)
+            proposals, origins = resolve_changes(
+                delta["NEW"] + delta["MODIFIED"],
+                translations=translations,
+                manual=manual,
+                terms=terms,
+                argos=translate,
+                memory_sources=memory_sources,
+            )
         except TranslationProviderUnavailable:
             if not allow_provider_unavailable:
                 raise
@@ -281,12 +313,18 @@ def run(
         validate_proposals(diff=delta, proposals=proposals, baseline_translations={r.identity: r.source for r in before})
 
         by_key = coalesce_proposals_by_key(delta["NEW"] + delta["MODIFIED"], proposals)
+        source_by_key: dict[str, str] = {}
+        for record in delta["NEW"] + delta["MODIFIED"]:
+            source_by_key.setdefault(record.key, record.source)
         for key, value in by_key.items():
             if key not in manual:
                 translations[key] = value
+            if key in source_by_key:
+                memory_sources[key] = source_fingerprint(source_by_key[key])
 
         output_dir.mkdir(parents=True, exist_ok=True)
         TRANSLATION_PATH.write_text(json.dumps(translations, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        atomic_json_write(MEMORY_SOURCES_PATH, memory_sources)
         snapshot_path = ROOT / "automation" / "snapshots" / f"{version}.json"
         snapshot_path.parent.mkdir(parents=True, exist_ok=True)
         atomic_json_write(snapshot_path, current)

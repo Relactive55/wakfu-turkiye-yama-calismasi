@@ -29,6 +29,7 @@ from automation.localization_pipeline import (
     format_ok,
     records_from_jar,
     resolve_changes,
+    source_fingerprint,
     validate_proposals,
 )
 from automation.release_package import build_release_assets, sha256
@@ -177,6 +178,7 @@ def run_simulation(model_path: Path, model_lock: Path, output_root: Path) -> dic
     # These entries are a temporary fixture overlay.  The real translation
     # files above remain untouched and are still loaded as the first source.
     translations["sim.tm"] = "Yeni [#1] sayısı"
+    memory_sources = {"sim.tm": source_fingerprint("New [#1] count")}
     manual["sim.manual"] = "Hoş geldin kahraman."
     # Markup-bearing labels are reviewed just like production UI labels; the
     # quality gate must not accept the fixture model's occasional English
@@ -191,6 +193,7 @@ def run_simulation(model_path: Path, model_lock: Path, output_root: Path) -> dic
         manual=manual,
         terms=terms,
         argos=translator,
+        memory_sources=memory_sources,
     )
     validate_proposals(
         diff=delta,

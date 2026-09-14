@@ -32,6 +32,14 @@ static class WakfuSetupApp {
     static string ReleaseBackupRoot { get { return Path.Combine(StateRoot,"Yedekler","Release_Guncellemeleri"); } }
     static string OverheadPreferencePath { get { return Path.Combine(StateRoot,"bas_ustu_yazi_boyutu.txt"); } }
 
+    sealed class TransactionFailureException : Exception {
+        internal readonly bool RollbackCompleted;
+        internal readonly string TransactionRoot;
+        internal TransactionFailureException(string message, Exception inner, bool rollbackCompleted, string transactionRoot) : base(message, inner) {
+            RollbackCompleted=rollbackCompleted;TransactionRoot=transactionRoot;
+        }
+    }
+
     [STAThread] static void Main(string[] args){
         if(args!=null&&args.Length>0&&String.Equals(args[0],"--replace-self",StringComparison.OrdinalIgnoreCase)){Environment.ExitCode=ReplaceSelf(args);return;}
         if(args!=null&&args.Length>0){try{string game=null,profile=null;for(int i=0;i<args.Length;i++){if(String.Equals(args[i],"--install",StringComparison.OrdinalIgnoreCase)&&i+1<args.Length)game=args[++i];else if(String.Equals(args[i],"--overhead-size",StringComparison.OrdinalIgnoreCase)&&i+1<args.Length)profile=args[++i];else throw new ArgumentException("Kullanım: --install <Wakfu klasörü> --overhead-size <normal|small|tiny>");}if(String.IsNullOrWhiteSpace(game))throw new ArgumentException("Wakfu klasörü belirtilmedi.");Install(game,NormalizeOverheadProfile(profile));}catch(Exception ex){Console.Error.WriteLine(ex.Message);Environment.ExitCode=1;}return;}
@@ -105,7 +113,9 @@ static class WakfuSetupApp {
     }
     static void WriteInstallState(string game,Dictionary<string,string> official,Dictionary<string,string> patched,string overheadProfile){
         Directory.CreateDirectory(StateRoot);var record=new Dictionary<string,object>{{"version",DistributionVersion()},{"gameDir",Path.GetFullPath(game)},{"installedAt",DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")},{"overheadScaleProfile",NormalizeOverheadProfile(overheadProfile)},{"official",official},{"patched",patched}};
-        var serializer=new JavaScriptSerializer{MaxJsonLength=Int32.MaxValue};string temp=InstallStatePath+"."+Guid.NewGuid().ToString("N")+".tmp";File.WriteAllText(temp,serializer.Serialize(record),new UTF8Encoding(false));if(File.Exists(InstallStatePath))File.Replace(temp,InstallStatePath,null);else File.Move(temp,InstallStatePath);
+        var serializer=new JavaScriptSerializer{MaxJsonLength=Int32.MaxValue};string temp=InstallStatePath+"."+Guid.NewGuid().ToString("N")+".tmp";
+        try{File.WriteAllText(temp,serializer.Serialize(record),new UTF8Encoding(false));if(File.Exists(InstallStatePath))File.Replace(temp,InstallStatePath,null);else File.Move(temp,InstallStatePath);}
+        finally{if(File.Exists(temp))try{File.Delete(temp);}catch{}}
     }
     static string StateText(Dictionary<string,object> state,string name){object value;return state!=null&&state.TryGetValue(name,out value)&&value!=null?Convert.ToString(value):"";}
     static bool SameGameDirectory(string first,string second){try{return String.Equals(Path.GetFullPath(first).TrimEnd(Path.DirectorySeparatorChar,Path.AltDirectorySeparatorChar),Path.GetFullPath(second).TrimEnd(Path.DirectorySeparatorChar,Path.AltDirectorySeparatorChar),StringComparison.OrdinalIgnoreCase);}catch{return false;}}
@@ -155,7 +165,9 @@ static class WakfuSetupApp {
     }
     static void UpdateLegacyInstallStateI18n(string game,string hash){
         var state=ReadInstallState();if(state==null||!SameGameDirectory(StateText(state,"gameDir"),game))return;object raw;var patched=state.TryGetValue("patched",out raw)?raw as Dictionary<string,object>:null;if(patched==null)return;
-        patched["i18n_en"]=hash;patched["i18n"]=hash;Directory.CreateDirectory(StateRoot);var serializer=new JavaScriptSerializer{MaxJsonLength=Int32.MaxValue};string temp=InstallStatePath+"."+Guid.NewGuid().ToString("N")+".tmp";File.WriteAllText(temp,serializer.Serialize(state),new UTF8Encoding(false));if(File.Exists(InstallStatePath))File.Replace(temp,InstallStatePath,null);else File.Move(temp,InstallStatePath);
+        patched["i18n_en"]=hash;patched["i18n"]=hash;Directory.CreateDirectory(StateRoot);var serializer=new JavaScriptSerializer{MaxJsonLength=Int32.MaxValue};string temp=InstallStatePath+"."+Guid.NewGuid().ToString("N")+".tmp";
+        try{File.WriteAllText(temp,serializer.Serialize(state),new UTF8Encoding(false));if(File.Exists(InstallStatePath))File.Replace(temp,InstallStatePath,null);else File.Move(temp,InstallStatePath);}
+        finally{if(File.Exists(temp))try{File.Delete(temp);}catch{}}
     }
     static string VerifyReleaseBaseline(string game,PatchManifest manifest){
         string live=GameFiles(game)["i18n_en"];
@@ -388,7 +400,29 @@ static class WakfuSetupApp {
         string fixtureRoot=Path.GetFullPath(fixture).TrimEnd(Path.DirectorySeparatorChar,Path.AltDirectorySeparatorChar);string expectedGame=Path.Combine(fixtureRoot,"game");
         return fixtureRoot.StartsWith(tempRoot,StringComparison.OrdinalIgnoreCase)&&Path.GetFileName(fixtureRoot).StartsWith("WakfuDagitimTest_",StringComparison.OrdinalIgnoreCase)&&String.Equals(Path.GetFullPath(game).TrimEnd(Path.DirectorySeparatorChar,Path.AltDirectorySeparatorChar),expectedGame,StringComparison.OrdinalIgnoreCase);
     }
-    static void EnsureClosed(string game){if(IsIsolatedDistributionTest(game))return;foreach(var n in new[]{"Wakfu","java","javaw","Ankama Launcher","zaap"})if(System.Diagnostics.Process.GetProcessesByName(n).Length>0)throw new Exception("Kurulumdan önce Wakfu ve Ankama Launcher tamamen kapatılmalıdır.");}
+    static bool IsProcessForGame(System.Diagnostics.Process process,string game,string processName){
+        if(!String.Equals(processName,"java",StringComparison.OrdinalIgnoreCase)&&!String.Equals(processName,"javaw",StringComparison.OrdinalIgnoreCase))return true;
+        try{
+            string executable=process.MainModule==null?"":process.MainModule.FileName;
+            if(String.IsNullOrWhiteSpace(executable))return false;
+            string expected=Path.Combine(game,"jre","bin",processName+".exe");
+            return String.Equals(Path.GetFullPath(executable),Path.GetFullPath(expected),StringComparison.OrdinalIgnoreCase);
+        }catch{return false;}
+    }
+    static bool IsRelevantProcessRunning(string name,string game){
+        foreach(System.Diagnostics.Process process in System.Diagnostics.Process.GetProcessesByName(name)){
+            try{if(IsProcessForGame(process,game,name))return true;}
+            catch{if(!String.Equals(name,"java",StringComparison.OrdinalIgnoreCase)&&!String.Equals(name,"javaw",StringComparison.OrdinalIgnoreCase))return true;}
+            finally{process.Dispose();}
+        }
+        return false;
+    }
+    static void EnsureClosed(string game){
+        if(IsIsolatedDistributionTest(game))return;
+        foreach(var n in new[]{"Wakfu","java","javaw","Ankama Launcher","zaap"})
+            if(IsRelevantProcessRunning(n,game))
+                throw new Exception("Kurulumdan önce Wakfu ve Ankama Launcher tamamen kapatılmalıdır. Engelleyen süreç: "+n);
+    }
     static Dictionary<string,string> GameFiles(string game){return new Dictionary<string,string>(StringComparer.OrdinalIgnoreCase){{"i18n_en",Path.Combine(game,"contents","i18n","i18n_en.jar")},{"i18n",Path.Combine(game,"contents","i18n","i18n.jar")},{"gui",Path.Combine(game,"contents","gui_jar","gui.jar")},{"client",Path.Combine(game,"lib","wakfu-client.jar")},{"data",Path.Combine(game,"contents","data","data.jar")}};}
     static string BackupName(string key){switch(key){case "i18n_en":return "i18n_en.jar";case "i18n":return "i18n.jar";case "gui":return "gui.jar";case "client":return "wakfu-client.jar";default:return "data.jar";}}
     static void ArchiveExistingBackups(){
@@ -443,19 +477,53 @@ static class WakfuSetupApp {
         string temporary=Path.Combine(directory,"."+Path.GetFileName(target)+"."+Guid.NewGuid().ToString("N")+".new");
         try{CopyFileWithRetry(source,temporary);if(!String.Equals(HashFile(source),HashFile(temporary),StringComparison.OrdinalIgnoreCase))throw new IOException("Temporary install file could not be verified: "+Path.GetFileName(target));if(File.Exists(target))File.Replace(temporary,target,null);else File.Move(temporary,target);}finally{if(File.Exists(temporary))try{File.Delete(temporary);}catch{}}
     }
-    static void CommitTransaction(Dictionary<string,string> stagedByTarget,string transactionRoot){
+    static List<string> RollbackTargets(List<string> committed,Dictionary<string,string> backups,bool atomic){
+        var failures=new List<string>();
+        for(int i=committed.Count-1;i>=0;i--){
+            string target=committed[i];
+            try{
+                string old;
+                if(backups.TryGetValue(target,out old)){
+                    if(atomic)ReplaceFileAtomically(old,target);else CopyFileWithRetry(old,target);
+                    if(!File.Exists(target)||!String.Equals(HashFile(old),HashFile(target),StringComparison.OrdinalIgnoreCase))throw new IOException("geri yüklenen dosya doğrulanamadı");
+                }else{
+                    if(File.Exists(target))File.Delete(target);
+                    if(File.Exists(target))throw new IOException("yeni dosya silinemedi");
+                }
+            }catch(Exception ex){failures.Add(Path.GetFileName(target)+": "+ex.Message);}
+        }
+        return failures;
+    }
+    static string RollbackDetail(List<string> failures){return failures.Count==0?"":Environment.NewLine+"Geri alınamayan dosyalar: "+String.Join(", ",failures.ToArray());}
+    static void CommitTransaction(Dictionary<string,string> stagedByTarget,string transactionRoot){CommitTransaction(stagedByTarget,transactionRoot,null);}
+    static void CommitTransaction(Dictionary<string,string> stagedByTarget,string transactionRoot,Action afterCommit){
         string rollback=Path.Combine(transactionRoot,"rollback");Directory.CreateDirectory(rollback);var backups=new Dictionary<string,string>(StringComparer.OrdinalIgnoreCase);var committed=new List<string>();
         try{
-            int index=0;foreach(var pair in stagedByTarget){Directory.CreateDirectory(Path.GetDirectoryName(pair.Key));string old=Path.Combine(rollback,(index++).ToString("D2")+"_"+Path.GetFileName(pair.Key));if(File.Exists(pair.Key)){File.Copy(pair.Key,old,true);backups[pair.Key]=old;}committed.Add(pair.Key);CopyFileWithRetry(pair.Value,pair.Key);if(!String.Equals(HashFile(pair.Value),HashFile(pair.Key),StringComparison.OrdinalIgnoreCase))throw new Exception("Kurulum sonrası dosya özeti eşleşmedi: "+Path.GetFileName(pair.Key));}
-        }catch(Exception ex){foreach(string target in committed)try{string old;if(backups.TryGetValue(target,out old))CopyFileWithRetry(old,target);else if(File.Exists(target))File.Delete(target);}catch{}throw new Exception("Kurulum tamamlanamadı; değiştirilen dosyalar otomatik geri alındı."+Environment.NewLine+"Ayrıntı: "+ex.Message,ex);}
+            int index=0;
+            foreach(var pair in stagedByTarget){
+                Directory.CreateDirectory(Path.GetDirectoryName(pair.Key));
+                string old=Path.Combine(rollback,(index++).ToString("D2")+"_"+Path.GetFileName(pair.Key));
+                if(File.Exists(pair.Key)){File.Copy(pair.Key,old,true);backups[pair.Key]=old;}
+                committed.Add(pair.Key);
+                CopyFileWithRetry(pair.Value,pair.Key);
+                if(!String.Equals(HashFile(pair.Value),HashFile(pair.Key),StringComparison.OrdinalIgnoreCase))throw new Exception("Kurulum sonrası dosya özeti eşleşmedi: "+Path.GetFileName(pair.Key));
+            }
+            if(afterCommit!=null)afterCommit();
+        }catch(Exception ex){
+            List<string> failures=RollbackTargets(committed,backups,false);
+            bool complete=failures.Count==0;
+            string message=complete
+                ? "Kurulum tamamlanamadı; değiştirilen dosyalar geri alındı."
+                : "Kurulum tamamlanamadı; geri alma tamamlanamadı. İşlem klasörü korunuyor: "+transactionRoot;
+            throw new TransactionFailureException(message+RollbackDetail(failures)+Environment.NewLine+"Ayrıntı: "+ex.Message,ex,complete,transactionRoot);
+        }
     }
-    // The release updater changes only the two i18n targets.  Its transaction
-    // is intentionally separate from the legacy five-file installer so the
-    // existing font, UI and client fixes remain untouched.
+    // Release rollback uses the same transaction engine as the full installer;
+    // this keeps the test seam and production path on one failure-safe code
+    // path while still limiting the release operation to its two i18n files.
     static void CommitReleaseI18nTransaction(Dictionary<string,string> stagedByTarget,string transactionRoot){
-        string rollback=Path.Combine(transactionRoot,"rollback");Directory.CreateDirectory(rollback);var backups=new Dictionary<string,string>(StringComparer.OrdinalIgnoreCase);var committed=new List<string>();
-        try{int index=0;foreach(var pair in stagedByTarget){string old=Path.Combine(rollback,(index++).ToString("D2")+"_"+Path.GetFileName(pair.Key));if(File.Exists(pair.Key)){File.Copy(pair.Key,old,true);backups[pair.Key]=old;}committed.Add(pair.Key);ReplaceFileAtomically(pair.Value,pair.Key);if(!String.Equals(HashFile(pair.Value),HashFile(pair.Key),StringComparison.OrdinalIgnoreCase))throw new IOException("Installed release file hash differs: "+Path.GetFileName(pair.Key));}}
-        catch(Exception ex){for(int i=committed.Count-1;i>=0;i--)try{string old;if(backups.TryGetValue(committed[i],out old))ReplaceFileAtomically(old,committed[i]);else if(File.Exists(committed[i]))File.Delete(committed[i]);}catch{}throw new ReleaseUpdateException("Release kurulumu tamamlanamadı; eski i18n dosyaları otomatik geri alındı.",ex);}
+        try{CommitTransaction(stagedByTarget,transactionRoot);}
+        catch(TransactionFailureException ex){throw new ReleaseUpdateException(ex.Message,ex);}
     }
     static string ReadStateBytesAsText(string path){return File.Exists(path)?File.ReadAllText(path,Encoding.UTF8):null;}
     static void RestoreStateText(string path,string original){string temporary=path+"."+Guid.NewGuid().ToString("N")+".restore";try{if(original==null){if(File.Exists(path))File.Delete(path);return;}Directory.CreateDirectory(Path.GetDirectoryName(path));File.WriteAllText(temporary,original,new UTF8Encoding(false));if(File.Exists(path))File.Replace(temporary,path,null);else File.Move(temporary,path);}finally{if(File.Exists(temporary))try{File.Delete(temporary);}catch{}}}
@@ -466,13 +534,37 @@ static class WakfuSetupApp {
 #endif
     static void InstallReleasedPatchCore(string game,string overheadProfile,LatestPatchRelease release,PatchManifest manifest,Action<string> progress,IReleaseHttpTransport transport){
         if(!IsWakfu(game))throw new ReleaseUpdateException("Geçerli Wakfu klasörü seçilmedi.");if(release==null||manifest==null)throw new ReleaseUpdateException("İndirilecek Release bilgisi yok.");EnsureClosed(game);WakfuReleaseUpdater.ValidateReleaseContract(release,manifest);string releaseBaseline=VerifyReleaseBaseline(game,manifest);
-        string transaction=Path.Combine(Path.GetTempPath(),"WakfuTurkceRelease_"+Guid.NewGuid().ToString("N"));Directory.CreateDirectory(transaction);string priorPatchState=ReadStateBytesAsText(InstalledPatchStatePath),priorInstallState=ReadStateBytesAsText(InstallStatePath),backup=null;Dictionary<string,string> live=null;bool filesCommitted=false;
-        try{string downloaded=Path.Combine(transaction,manifest.File);if(progress!=null)progress("İndiriliyor...");WakfuReleaseUpdater.DownloadPatch(release,manifest,downloaded);if(progress!=null)progress("Doğrulanıyor...");WakfuReleaseUpdater.VerifyDownloadedPatch(downloaded,manifest);VerifyJar(downloaded,"texts_en.properties");VerifyJar(downloaded,"texts_en_cleaned.properties");live=GameFiles(game);backup=BackupReleaseTargets(live,manifest);if(progress!=null)progress("Kuruluyor...");Install(game,overheadProfile,downloaded,releaseBaseline);filesCommitted=true;if(!String.Equals(HashFile(live["i18n_en"]),manifest.Sha256,StringComparison.OrdinalIgnoreCase)||!String.Equals(HashFile(live["i18n"]),manifest.Sha256,StringComparison.OrdinalIgnoreCase))throw new ReleaseUpdateException("Kurulum sonrası i18n dosyası doğrulanamadı.");WriteReleasedPatchState(game,release,manifest,backup);UpdateLegacyInstallStateI18n(game,manifest.Sha256);}
-        catch{if(filesCommitted&&live!=null&&backup!=null)try{RestoreReleaseI18nTargets(live,backup,Path.Combine(transaction,"state-rollback"));}catch{}try{RestoreStateText(InstalledPatchStatePath,priorPatchState);}catch{}try{RestoreStateText(InstallStatePath,priorInstallState);}catch{}throw;}
-        finally{try{Directory.Delete(transaction,true);}catch{}}
+        string transaction=Path.Combine(Path.GetTempPath(),"WakfuTurkceRelease_"+Guid.NewGuid().ToString("N"));Directory.CreateDirectory(transaction);string priorPatchState=ReadStateBytesAsText(InstalledPatchStatePath),priorInstallState=ReadStateBytesAsText(InstallStatePath),backup=null;Dictionary<string,string> live=null;bool preserveTransaction=false;
+        try{
+            string downloaded=Path.Combine(transaction,manifest.File);
+            if(progress!=null)progress("İndiriliyor...");
+            WakfuReleaseUpdater.DownloadPatch(release,manifest,downloaded);
+            if(progress!=null)progress("Doğrulanıyor...");
+            WakfuReleaseUpdater.VerifyDownloadedPatch(downloaded,manifest);VerifyJar(downloaded,"texts_en.properties");VerifyJar(downloaded,"texts_en_cleaned.properties");
+            live=GameFiles(game);backup=BackupReleaseTargets(live,manifest);
+            if(progress!=null)progress("Kuruluyor...");
+            Install(game,overheadProfile,downloaded,releaseBaseline,delegate{
+                if(!String.Equals(HashFile(live["i18n_en"]),manifest.Sha256,StringComparison.OrdinalIgnoreCase)||!String.Equals(HashFile(live["i18n"]),manifest.Sha256,StringComparison.OrdinalIgnoreCase))throw new ReleaseUpdateException("Kurulum sonrası i18n dosyası doğrulanamadı.");
+                WriteReleasedPatchState(game,release,manifest,backup);UpdateLegacyInstallStateI18n(game,manifest.Sha256);
+            });
+        }catch(TransactionFailureException ex){
+            preserveTransaction=!ex.RollbackCompleted;
+            var stateFailures=new List<string>();
+            try{RestoreStateText(InstalledPatchStatePath,priorPatchState);}catch(Exception stateError){stateFailures.Add("installed_patch.json: "+stateError.Message);}
+            try{RestoreStateText(InstallStatePath,priorInstallState);}catch(Exception stateError){stateFailures.Add("kurulum_durumu.json: "+stateError.Message);}
+            if(stateFailures.Count>0)throw new ReleaseUpdateException(ex.Message+Environment.NewLine+"Durum geri alınamadı: "+String.Join(", ",stateFailures.ToArray()),ex);
+            throw;
+        }catch(Exception ex){
+            var stateFailures=new List<string>();
+            try{RestoreStateText(InstalledPatchStatePath,priorPatchState);}catch(Exception stateError){stateFailures.Add("installed_patch.json: "+stateError.Message);}
+            try{RestoreStateText(InstallStatePath,priorInstallState);}catch(Exception stateError){stateFailures.Add("kurulum_durumu.json: "+stateError.Message);}
+            if(stateFailures.Count>0)throw new ReleaseUpdateException("Release kurulumu başarısız oldu; durum geri alınamadı: "+String.Join(", ",stateFailures.ToArray()),ex);
+            throw;
+        }finally{if(!preserveTransaction)try{Directory.Delete(transaction,true);}catch{}}
     }
-    static void Install(string game,string overheadProfile){Install(game,overheadProfile,null,null);}
-    static void Install(string game,string overheadProfile,string releasedI18n,string releasedSource){
+    static void Install(string game,string overheadProfile){Install(game,overheadProfile,null,null,null);}
+    static void Install(string game,string overheadProfile,string releasedI18n,string releasedSource){Install(game,overheadProfile,releasedI18n, releasedSource, null);}
+    static void Install(string game,string overheadProfile,string releasedI18n,string releasedSource,Action afterCommit){
         overheadProfile=NormalizeOverheadProfile(overheadProfile);if(!IsWakfu(game))throw new Exception("Geçerli Wakfu klasörü seçilmedi.");EnsureClosed(game);
 #if !WAKFU_TESTS
         VerifyEmbeddedPackage();
@@ -482,22 +574,32 @@ static class WakfuSetupApp {
         // Exercise the same verified release transaction without requiring
         // the full five-file game installation or embedded production assets.
         if(IsIsolatedDistributionTest(game)&&!String.IsNullOrWhiteSpace(releasedI18n)){
-            var releaseLive=GameFiles(game);var releaseStaged=new Dictionary<string,string>(StringComparer.OrdinalIgnoreCase){{releaseLive["i18n_en"],releasedI18n},{releaseLive["i18n"],releasedI18n}};CommitReleaseI18nTransaction(releaseStaged,Path.Combine(Path.GetTempPath(),"WakfuReleaseTest_"+Guid.NewGuid().ToString("N")));return;
+            var releaseLive=GameFiles(game);var releaseStaged=new Dictionary<string,string>(StringComparer.OrdinalIgnoreCase){{releaseLive["i18n_en"],releasedI18n},{releaseLive["i18n"],releasedI18n}};
+            string releaseTransaction=Path.Combine(Path.GetTempPath(),"WakfuReleaseTest_"+Guid.NewGuid().ToString("N"));Directory.CreateDirectory(releaseTransaction);bool preserveReleaseTransaction=false;
+            try{CommitTransaction(releaseStaged,releaseTransaction,afterCommit);}
+            catch(TransactionFailureException ex){preserveReleaseTransaction=!ex.RollbackCompleted;throw;}
+            finally{if(!preserveReleaseTransaction)try{Directory.Delete(releaseTransaction,true);}catch{}}
+            return;
         }
 #endif
-        if(String.IsNullOrWhiteSpace(releasedI18n)&&IsFullyCurrentInstallation(game,overheadProfile)){try{WriteOverheadPreference(overheadProfile);}catch{}return;}string transaction=Path.Combine(Path.GetTempPath(),"WakfuTurkceKurulum_"+Guid.NewGuid().ToString("N"));Directory.CreateDirectory(transaction);
+        if(String.IsNullOrWhiteSpace(releasedI18n)&&IsFullyCurrentInstallation(game,overheadProfile)){try{WriteOverheadPreference(overheadProfile);}catch{}return;}string transaction=Path.Combine(Path.GetTempPath(),"WakfuTurkceKurulum_"+Guid.NewGuid().ToString("N"));Directory.CreateDirectory(transaction);bool preserveTransaction=false;
         try{
             var live=GameFiles(game);if(!String.IsNullOrWhiteSpace(releasedI18n)){if(String.IsNullOrWhiteSpace(releasedSource)||!File.Exists(releasedSource))throw new ReleaseUpdateException("Temiz İngilizce dil kaynağı doğrulanamadı.");Directory.CreateDirectory(BackupDir);string cleanBackup=Path.Combine(BackupDir,"i18n_en.jar");if(!File.Exists(cleanBackup)||!String.Equals(HashFile(cleanBackup),HashFile(releasedSource),StringComparison.OrdinalIgnoreCase))File.Copy(releasedSource,cleanBackup,true);string activeBackup=Path.Combine(BackupDir,"i18n.jar");if(!File.Exists(activeBackup))File.Copy(cleanBackup,activeBackup,true);}var official=PrepareOfficialSources(game,Path.Combine(transaction,"official"),!String.IsNullOrWhiteSpace(releasedI18n));string patchedDir=Path.Combine(transaction,"patched");Directory.CreateDirectory(patchedDir);var staged=new Dictionary<string,string>(StringComparer.OrdinalIgnoreCase);
             string prepared;if(String.IsNullOrWhiteSpace(releasedI18n))prepared=BuildAdaptivePatch(official["i18n_en"]);else{VerifyJar(releasedI18n,"texts_en.properties");VerifyJar(releasedI18n,"texts_en_cleaned.properties");prepared=Path.Combine(patchedDir,"release-i18n.jar");File.Copy(releasedI18n,prepared,true);}string patchedEn=Path.Combine(patchedDir,"i18n_en.jar"),patchedActive=Path.Combine(patchedDir,"i18n.jar");File.Move(prepared,patchedEn);File.Copy(patchedEn,patchedActive,true);staged[live["i18n_en"]]=patchedEn;staged[live["i18n"]]=patchedActive;
             string gui=Path.Combine(patchedDir,"gui.jar");File.Copy(official["gui"],gui,true);PatchGuiFonts(gui);VerifyJar(gui,"theme/fonts/asul.ttf");staged[live["gui"]]=gui;
             string client=Path.Combine(patchedDir,"wakfu-client.jar");File.Copy(official["client"],client,true);PatchCharacterChoiceTitle(client);PatchWeatherTimeFormat(client);PatchBattlegroundTimeFormat(client);PatchAchievementTotalLabel(client);PatchPersistentNameOverhead(client,overheadProfile);PatchAlmanaxDescription(client);VerifyJar(client,"dde.class");VerifyPersistentNameOverheadJar(client,overheadProfile);VerifyClientWithGameJava(game,client);staged[live["client"]]=client;
             string data=Path.Combine(patchedDir,"data.jar");File.Copy(official["data"],data,true);EnsureNameToggleShortcut(data);VerifyJar(data,"shortcuts.xml");staged[live["data"]]=data;
-            CommitTransaction(staged,transaction);var officialHashes=new Dictionary<string,string>();var patchedHashes=new Dictionary<string,string>();foreach(var pair in official)officialHashes[pair.Key]=HashFile(pair.Value);foreach(var pair in live)patchedHashes[pair.Key]=HashFile(pair.Value);WriteInstallState(game,officialHashes,patchedHashes,overheadProfile);try{WriteOverheadPreference(overheadProfile);}catch{}
-        }finally{try{Directory.Delete(transaction,true);}catch{}}
+            var officialHashes=new Dictionary<string,string>();var patchedHashes=new Dictionary<string,string>();foreach(var pair in official)officialHashes[pair.Key]=HashFile(pair.Value);foreach(var pair in live){string stagedPath; if(!staged.TryGetValue(pair.Value,out stagedPath))throw new Exception("Kurulum hedefi hazırlanamadı: "+Path.GetFileName(pair.Value));patchedHashes[pair.Key]=HashFile(stagedPath);}
+            CommitTransaction(staged,transaction,delegate{WriteInstallState(game,officialHashes,patchedHashes,overheadProfile);if(afterCommit!=null)afterCommit();});try{WriteOverheadPreference(overheadProfile);}catch{}
+        }catch(TransactionFailureException ex){preserveTransaction=!ex.RollbackCompleted;throw;
+        }finally{if(!preserveTransaction)try{Directory.Delete(transaction,true);}catch{}}
     }
     static void Restore(string game){
         if(!IsWakfu(game))throw new Exception("Geçerli Wakfu klasörü seçilmedi.");EnsureClosed(game);string en=Path.Combine(BackupDir,"i18n_en.jar");if(!File.Exists(en))throw new Exception("Bu bilgisayarda geri yüklenecek temiz resmi yedek bulunamadı.");string transaction=Path.Combine(Path.GetTempPath(),"WakfuTurkceGeriAl_"+Guid.NewGuid().ToString("N"));Directory.CreateDirectory(transaction);
-        try{var live=GameFiles(game);var staged=new Dictionary<string,string>(StringComparer.OrdinalIgnoreCase);foreach(var pair in live){string backup=Path.Combine(BackupDir,BackupName(pair.Key));if(File.Exists(backup))staged[pair.Value]=backup;}CommitTransaction(staged,transaction);if(File.Exists(InstallStatePath))File.Delete(InstallStatePath);}finally{try{Directory.Delete(transaction,true);}catch{}}
+        bool preserveTransaction=false;
+        try{var live=GameFiles(game);var staged=new Dictionary<string,string>(StringComparer.OrdinalIgnoreCase);foreach(var pair in live){string backup=Path.Combine(BackupDir,BackupName(pair.Key));if(File.Exists(backup))staged[pair.Value]=backup;}CommitTransaction(staged,transaction);if(File.Exists(InstallStatePath))File.Delete(InstallStatePath);if(File.Exists(InstalledPatchStatePath))File.Delete(InstalledPatchStatePath);}
+        catch(TransactionFailureException ex){preserveTransaction=!ex.RollbackCompleted;throw;}
+        finally{if(!preserveTransaction)try{Directory.Delete(transaction,true);}catch{}}
     }
 
     sealed class SetupForm:Form {

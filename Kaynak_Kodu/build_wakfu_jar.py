@@ -104,22 +104,23 @@ def rewrite_properties(data, translations, term_keys, term_values, phrases, manu
             protected += 1
             output.append(line)
             continue
-        # Zorunlu İngilizce beceri/eşya adları dışında insan onaylı anahtar ve
-        # kaynak-değer terimleri üstün gelir. Kaynak-değer kuralı, JAR içinde
-        # aynı anahtarın farklı dünya haritası metinleriyle tekrarlandığı
-        # durumlarda anahtar bazlı belleğin yanlış kopyayı ezmesini önler.
+        # Kaynak-değer kuralı, JAR içinde aynı anahtarın farklı dünya haritası
+        # metinleriyle tekrarlandığı durumlarda anahtar bazlı belleğin yanlış
+        # kopyayı ezmesini önler.  Resolve it before consulting key memory so
+        # a stale key-based translation cannot win over an exact source term.
+        source_term_forced = (
+            source in term_values
+            and key.startswith(VISIBLE_WORLD_LABEL_PREFIXES)
+        )
         allow_intrinsic_override = (
             key in manual
             or key in term_keys
+            or source_term_forced
             or is_translatable_inventory_name(key, source)
             or (
                 key in MANUAL_PROTECTED_TRANSLATION_KEYS
                 and (key in manual or key in term_keys or key in translations)
             )
-        )
-        source_term_forced = (
-            source in term_values
-            and key.startswith(VISIBLE_WORLD_LABEL_PREFIXES)
         )
         allow_value_override = (
             key in manual
@@ -141,13 +142,13 @@ def rewrite_properties(data, translations, term_keys, term_values, phrases, manu
         if key in manual:
             candidate = str(manual[key])
             apply_phrases = False
+        elif source_term_forced:
+            candidate = str(term_values[source])
+            apply_phrases = False
         elif key in translations and str(translations[key]).strip():
             candidate = str(translations[key])
         elif key in term_keys:
             candidate = str(term_keys[key])
-            apply_phrases = False
-        elif source_term_forced:
-            candidate = str(term_values[source])
             apply_phrases = False
         elif source in term_values:
             candidate = str(term_values[source])

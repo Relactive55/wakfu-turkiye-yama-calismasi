@@ -47,6 +47,7 @@ def main() -> None:
     )
     changed = [
         "Ceviri_Verileri/wakfu_tr_ceviri.json",
+        "Ceviri_Verileri/translation_memory_sources.json",
         f"Raporlar/wakfu-update-{args.game_version}.json",
     ]
     print(

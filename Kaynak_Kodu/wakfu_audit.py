@@ -26,6 +26,7 @@ FORMAT_TOKEN_RE = re.compile(
     r"\{\[[^\]]+\]\?(?:s|es)?:\}|\\[ntr]|\[(?:[#$=,<>-][^\]]*|\d+[A-Za-z0-9*!<>=.$-]*|"
     r"[A-Za-z][A-Za-z0-9_.-]{0,31})\]|<(?:[^<>\"']|\"[^\"]*\"|'[^']*')*>|%[A-Za-z_][A-Za-z0-9_.-]*%"
 )
+CONDITIONAL_HEADER_RE = re.compile(r"\{\[[^\]]+\]\?")
 ENGLISH_RE = re.compile(
     r"(?i)\b(the|and|you|your|with|from|into|must|cannot|available|unavailable|"
     r"default|damage|mastery|characteristics|recommended|rarity|pockets|page|click|level|"
@@ -828,59 +829,67 @@ def strip_probable_proper_names(text):
     return pattern.sub(" ", text)
 
 
+def _legacy_format_structure(text):
+    """Retain compatibility with legacy conditionals lacking a false branch."""
+    headers = tuple(match.group(0).casefold() for match in CONDITIONAL_HEADER_RE.finditer(text))
+    stripped = CONDITIONAL_HEADER_RE.sub(" ", text)
+    ordinary = tuple(match.group(0).casefold() for match in FORMAT_TOKEN_RE.finditer(stripped))
+    punctuation = tuple(char for char in stripped if char in "{}?:")
+    return ("legacy", headers, ordinary, punctuation, text.count("{"), text.count("}"))
+
+
+def _format_structure(text):
+    """Return nested format atoms, retaining which conditional branch owns each."""
+
+    def segment(index, stops):
+        nodes = []
+        while index < len(text):
+            if text.startswith("{[", index):
+                conditional, index = parse_conditional(index)
+                if conditional is None:
+                    return None, index, None
+                nodes.append(conditional)
+                continue
+            char = text[index]
+            if char in stops and (char != ":" or index == 0 or text[index - 1] != "\\"):
+                return tuple(nodes), index, char
+            match = FORMAT_TOKEN_RE.match(text, index)
+            if match:
+                # The cleaned properties entry is lower-cased upstream; token
+                # identity is therefore compared without case sensitivity.
+                nodes.append(("atom", match.group(0).casefold()))
+                index = match.end()
+                continue
+            index += 1
+        return tuple(nodes), index, None
+
+    def parse_conditional(start):
+        header_end = text.find("]?", start + 2)
+        if header_end < 0:
+            return None, start
+        first, separator, delimiter = segment(header_end + 2, {":", "}"})
+        if first is None or delimiter != ":":
+            return None, start
+        second, close, delimiter = segment(separator + 1, {"}"})
+        if second is None or delimiter != "}":
+            return None, start
+        header = text[start : header_end + 2].casefold()
+        return ("conditional", header, first, second), close + 1
+
+    structure, end, delimiter = segment(0, set())
+    if structure is None or delimiter is not None or end != len(text):
+        return _legacy_format_structure(text)
+    return structure
+
+
 def format_ok(source, target):
     # Kaynakta tek bir ``\n`` varken çeviride ``\\n`` bulunması oyunda
     # gerçek satır sonu yerine görünür "\n" yazdırır.
     if "\\\\n" in target and "\\\\n" not in source:
         return False
-    source_tokens = format_tokens(source)
-    target_tokens = format_tokens(target)
-    if source_tokens == target_tokens:
-        return True
-    # The upstream cleaned properties copy is lower-cased, including
-    # placeholder names.  The JAR builder already restores source spelling;
-    # audit the shared translation memory by token identity, not casing.
-    if [value.casefold() for value in source_tokens] == [value.casefold() for value in target_tokens]:
-        return True
-
-    # Deeply nested Wakfu conditionals occasionally contain natural punctuation
-    # that confuses the recursive tokenizer.  Compare a strict structural
-    # signature as a safe fallback: every condition, placeholder, tag and
-    # branch boundary must still be present in the same quantity/order.
-    header_re = re.compile(r"\{\[[^\]]+\]\?")
-
-    def conditional_headers(text):
-        result = []
-        for match in header_re.finditer(text):
-            depth = 1
-            separator_found = False
-            closed = False
-            for char in text[match.end():]:
-                if char == "{":
-                    depth += 1
-                elif char == "}":
-                    depth -= 1
-                    if depth == 0:
-                        closed = True
-                        break
-                elif char == ":" and depth == 1:
-                    separator_found = True
-            if not closed or not separator_found:
-                return None
-            result.append(match.group(0))
-        return tuple(result)
-
-    def signature(text):
-        headers = header_re.findall(text)
-        without_headers = header_re.sub("", text)
-        ordinary = re.findall(
-            r"\\[ntr]|<(?:[^<>\"']|\"[^\"]*\"|'[^']*')*>|%[A-Za-z_][A-Za-z0-9_.-]*%|"
-            r"\[(?:[#$=,<>-][^\]]*|\d+[A-Za-z0-9*!<>=.$-]*|[A-Za-z][A-Za-z0-9_.-]{0,31})\]",
-            without_headers,
-        )
-        return headers, ordinary, conditional_headers(text), text.count("{"), text.count("}")
-
-    return signature(source) == signature(target)
+    source_structure = _format_structure(source)
+    target_structure = _format_structure(target)
+    return source_structure == target_structure
 
 
 def complete(source, target):

@@ -7,7 +7,7 @@ import zipfile
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
-from automation.localization_pipeline import Record, diff_records, format_ok, records_from_jar, resolve_changes, validate_proposals
+from automation.localization_pipeline import Record, diff_records, format_ok, records_from_jar, resolve_changes, source_fingerprint, translate_preserving_tokens, validate_proposals
 from automation.translation_quality import quality_problem
 from automation.errors import TranslationProviderUnavailable, VerificationError
 import automation.production_pr_update as production_pr_update
@@ -48,6 +48,34 @@ class PipelineSimulation(unittest.TestCase):
                 "Biyome başına Max: [#1]/[#2]",
             )
         )
+        self.assertIsNotNone(
+            quality_problem(
+                "conditional.residue",
+                "Use {[condition]?Yes:No}",
+                "Kullan {[condition]?Evet:No}",
+            )
+        )
+        self.assertIsNone(
+            quality_problem(
+                "conditional.turkish",
+                "Use {[condition]?Ready:Waiting}",
+                "Kullan {[condition]?Hazır:Bekliyor}",
+            )
+        )
+
+    def test_argos_translates_conditional_branch_prose_without_touching_syntax(self) -> None:
+        calls: list[str] = []
+
+        def provider(text: str) -> str:
+            calls.append(text)
+            return {"Deals ": "Verir ", "damage": "hasar", "Yes": "Evet", "No": "Hayır"}.get(text, text)
+
+        source = "Deals {[=1]?damage:damage} {[#1]} {[condition]?Yes:No}"
+        translated = translate_preserving_tokens(source, provider)
+        self.assertEqual(translated, "Verir {[=1]?hasar:hasar} {[#1]} {[condition]?Evet:Hayır}")
+        self.assertTrue(format_ok(source, translated))
+        self.assertNotIn("{[=1]?damage:damage}", calls)
+        self.assertNotIn("{[condition]?Yes:No}", calls)
 
     def test_quality_guard_allows_reviewed_turkish_and_proper_names(self) -> None:
         self.assertIsNone(
@@ -90,13 +118,14 @@ class PipelineSimulation(unittest.TestCase):
             1,
             "Max per biome: [#1]/[#2]",
         )
-        with self.assertRaisesRegex(VerificationError, "translation quality guard"):
+        with self.assertRaises(TranslationProviderUnavailable):
             resolve_changes(
                 [record],
                 translations={"remembered": "Biyome başına Max: [#1]/[#2]"},
                 manual={},
                 terms=({}, {}, {}),
                 argos=None,
+                memory_sources={},
             )
 
     def test_case_only_duplicate_sources_share_primary_proposal(self) -> None:
@@ -182,6 +211,12 @@ class PipelineSimulation(unittest.TestCase):
         self.assertTrue(format_ok("Lucky Charm{[~1]?s:}", "\u015eans T\u0131ls\u0131m\u0131{[~1]?s:}"))
         self.assertFalse(format_ok("Lucky Charm{[~1]?s:}", "\u015eans T\u0131ls\u0131m\u0131"))
 
+    def test_conditional_branch_placeholder_ownership_is_preserved(self) -> None:
+        source = "Result {[condition]?value [#1]:fallback [#2]}"
+        moved = "Sonuç {[condition]?value [#2]:fallback [#1]}"
+        self.assertFalse(format_ok(source, moved))
+        self.assertFalse(format_ok("{[=1]?[#1]:[#2]}", "{[=1]?[#1][#2]:}"))
+
     def test_reviewed_translation_carries_new_simple_suffix_marker(self) -> None:
         record = Record(
             "texts_en.properties:content.14.849#1",
@@ -252,7 +287,7 @@ class PipelineSimulation(unittest.TestCase):
             self.assertEqual([x.key for x in delta['NEW']], ['new'])
             self.assertEqual([x.key for x in delta['REMOVED']], ['removed'])
             tm={'mod':'Yeni [#1]'}; manual={}; terms=({}, {'New':'Yeni'}, {})
-            proposed, origin=resolve_changes(delta['NEW']+delta['MODIFIED'],translations=tm,manual=manual,terms=terms,argos=lambda text: text.replace('C','Ç'))
+            proposed, origin=resolve_changes(delta['NEW']+delta['MODIFIED'],translations=tm,manual=manual,terms=terms,argos=lambda text: text.replace('C','Ç'),memory_sources={'mod':source_fingerprint('New [#1]')})
             self.assertEqual(origin['texts_en.properties:mod#1'],'memory')
             self.assertEqual(origin['texts_en.properties:new#1'],'glossary-value')
             self.assertEqual(origin['texts_en.properties:dup#2'],'argos')
