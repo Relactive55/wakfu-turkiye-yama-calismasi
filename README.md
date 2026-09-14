@@ -34,7 +34,7 @@ Steam'i farklı bir diske veya Steam Kütüphanesine kurduysanız:
 
 - **Kurulum Aracı:** 6.5.11
 - **Dosya Sürümü:** 6.5.11.0
-- **Kararlı Türkçe Yama:** tr-2026.09.06.2
+- **Kararlı Türkçe Yama:** tr-2026.09.09.1
 
 ### TÜRKÇE YAMA HAKKINDA
 

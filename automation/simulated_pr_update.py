@@ -20,6 +20,7 @@ from .localization_pipeline import (
     ENTRIES,
     diff_records,
     format_ok,
+    source_fingerprint,
     records_from_jar,
     resolve_changes,
     validate_proposals,
@@ -150,6 +151,7 @@ def run(*, output_dir: Path, model_path: Path, model_lock: Path) -> dict[str, ob
         # These are fixture-only overlays.  The production files are read but
         # never written or mutated on disk.
         translations["fixture.tm"] = "Yeni [#1] eşya"
+        memory_sources = {"fixture.tm": source_fingerprint("New [#1] items")}
         manual["fixture.duplicate"] = "Yinelenen metin"
         terms[1]["Damage <b>value</b>"] = "Hasar <b>değeri</b>"
 
@@ -160,6 +162,7 @@ def run(*, output_dir: Path, model_path: Path, model_lock: Path) -> dict[str, ob
             manual=manual,
             terms=terms,
             argos=translate,
+            memory_sources=memory_sources,
         )
         validate_proposals(
             diff=delta,

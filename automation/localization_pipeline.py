@@ -13,11 +13,13 @@ from .errors import TranslationProviderUnavailable, VerificationError
 from .translation_quality import quality_problem
 
 ENTRIES = ("texts_en.properties", "texts_en_cleaned.properties")
-# TOKEN is used when text is sent through Argos.  A complete conditional is
-# masked as one unit there so that its control syntax can never be rewritten by
-# the model.  Validation below uses a recursive structural tokenizer instead:
-# words inside conditional branches are translatable and must not be compared
-# byte-for-byte with the English source.
+# TOKEN protects ordinary format atoms whenever text is sent through Argos.
+# ``mask_tokens`` keeps its historical whole-conditional behavior for callers
+# that need a raw token snapshot; ``translate_preserving_tokens`` now parses
+# conditionals separately so their visible branch words are translated while
+# the control syntax stays local.  Validation below uses a recursive
+# structural tokenizer, so translated branch prose is not compared byte-for-
+# byte with the English source.
 TOKEN = re.compile(r"\{\[[^\]]+\]\?(?:[^{}]|\\.)*\}|\\[ntr]|<[^>]*>|\[(?:[#$=,<>/-][^\]]*|\d+[A-Za-z0-9*!<>=.$-]*|[A-Za-z][A-Za-z0-9_.-]{0,31})\]|%[A-Za-z_][A-Za-z0-9_.-]*%")
 _ORDINARY_TOKEN = re.compile(
     r"\\[ntr]|<(?:[^<>\"']|\"[^\"]*\"|'[^']*')*>|"
@@ -26,6 +28,7 @@ _ORDINARY_TOKEN = re.compile(
 )
 _SIMPLE_CONDITIONAL = re.compile(r"\{\[[^\]]+\]\?(?:s|es)?:\}")
 _CONDITIONAL_MARKER = re.compile(r"\{\[[^\]]+\]\?(?:[^{}]|\\.)*\}")
+_CONDITIONAL_HEADER = re.compile(r"\{\[[^\]]+\]\?")
 
 
 @dataclass(frozen=True)
@@ -35,6 +38,27 @@ class Record:
     key: str
     occurrence: int
     source: str
+
+
+def source_fingerprint(source: str) -> str:
+    """Return the stable source-text fingerprint used by translation memory."""
+    return hashlib.sha256(source.encode("utf-8")).hexdigest()
+
+
+def memory_source_matches(record: Record, memory_sources: dict[str, str] | None) -> bool:
+    """Require a source hash before a remembered translation can be reused.
+
+    The project translation file intentionally stays a compact key-to-value
+    map.  Its companion source map records which exact English text was
+    reviewed for each key.  Missing metadata is treated as untrusted legacy
+    memory and must go through Argos or manual review again.
+    """
+    if not isinstance(memory_sources, dict):
+        return False
+    recorded = memory_sources.get(record.key)
+    if not isinstance(recorded, str) or not re.fullmatch(r"[0-9a-fA-F]{64}", recorded):
+        return False
+    return recorded.casefold() == source_fingerprint(record.source)
 
 
 def records_from_jar(jar: Path) -> list[Record]:
@@ -74,64 +98,73 @@ def same_tokens(source: str, target: str) -> bool:
     return [m.group() for m in TOKEN.finditer(source)] == [m.group() for m in TOKEN.finditer(target)]
 
 
-def _format_signature(text: str) -> tuple[tuple[str, str], ...] | None:
-    """Return syntax atoms while ignoring natural-language branch text.
+def _legacy_format_signature(text: str) -> tuple:
+    """Keep compatibility with legacy conditionals without a false branch.
 
-    WAKFU conditionals contain translatable text on both sides of ``:``.  The
-    old validator treated the whole conditional as an opaque token, which
-    rejected valid translations such as ``{[~1]?s:}`` -> the same suffix and
-    ``{[~1]?[#1]:the Haven Place}`` -> the same structure with translated
-    branch words.
-    This parser compares condition headers, nested placeholders, separators and
-    closing braces, but deliberately ignores ordinary words in branches.
+    A few shipped strings use ``{[condition]?}`` (or contain an already
+    malformed historical header).  They cannot be represented by the normal
+    two-branch tree, but rejecting an unchanged reviewed value would make the
+    builder silently drop existing translations.  The fallback compares the
+    available headers, atoms and punctuation shape conservatively; all
+    well-formed conditionals still use the branch-aware parser below.
     """
-    header_re = re.compile(r"\{\[[^\]]+\]\?")
-    # ``texts_en_cleaned.properties`` is lower-cased upstream, including
-    # placeholder names.  Token spelling is therefore compared
-    # case-insensitively; the build step still restores the exact source
-    # spelling before the JAR is emitted.
-    headers = tuple(item.casefold() for item in header_re.findall(text))
-    without_headers = header_re.sub("", text)
-    ordinary = tuple(match.group(0).casefold() for match in _ORDINARY_TOKEN.finditer(without_headers))
+    headers = tuple(match.group(0).casefold() for match in _CONDITIONAL_HEADER.finditer(text))
+    stripped = _CONDITIONAL_HEADER.sub(" ", text)
+    ordinary = tuple(match.group(0).casefold() for match in _ORDINARY_TOKEN.finditer(stripped))
+    punctuation = tuple(char for char in stripped if char in "{}?:")
+    return ("legacy", headers, ordinary, punctuation, text.count("{"), text.count("}"))
 
-    # A colon can be ordinary prose (for example ``"Some items:"``), so its
-    # exact position is not a reliable delimiter.  Match the release audit's
-    # conservative structural check: every conditional header must close.  The
-    # presence/absence of an unescaped branch separator at each nesting level is
-    # retained, while its exact position is intentionally ignored.
-    conditional_closed: list[bool] = []
-    conditional_separators: list[bool] = []
-    for match in header_re.finditer(text):
-        depth = 1
-        separator_found = False
-        closed = False
-        for index in range(match.end(), len(text)):
-            char = text[index]
+
+def _format_signature(text: str) -> tuple | None:
+    """Return a nested syntax signature while ignoring translated prose.
+
+    A conditional is not an opaque token: placeholders and markup in its two
+    branches belong to different runtime paths.  A flat token list therefore
+    accepted an unsafe translation that moved a placeholder from the true
+    branch to the false branch.  The recursive parser below keeps each branch
+    as its own tuple and compares only control syntax, not ordinary words.
+    """
+
+    def segment(index: int, stops: set[str]):
+        nodes: list[tuple] = []
+        while index < len(text):
             if text.startswith("{[", index):
-                depth += 1
-            elif char == "}":
-                depth -= 1
-                if depth == 0:
-                    closed = True
-                    break
-            elif char == ":" and depth == 1 and (index == 0 or text[index - 1] != "\\"):
-                separator_found = True
-        # A small number of legacy strings contain an intentionally unterminated
-        # outer conditional.  Preserve that source shape, but still reject a
-        # translation that changes it by comparing the closed flags below.
-        conditional_closed.append(closed)
-        conditional_separators.append(separator_found)
-    if len(conditional_closed) != len(headers):
-        return None
-    return (
-        ("headers", "\x1f".join(headers)),
-        ("ordinary", "\x1f".join(ordinary)),
-        ("conditional-count", str(len(headers))),
-        ("conditional-closed", "".join("1" if item else "0" for item in conditional_closed)),
-        ("conditional-separators", "".join("1" if item else "0" for item in conditional_separators)),
-        ("open-braces", str(text.count("{"))),
-        ("close-braces", str(text.count("}"))),
-    )
+                conditional, index = parse_conditional(index)
+                if conditional is None:
+                    return None, index, None
+                nodes.append(conditional)
+                continue
+            char = text[index]
+            if char in stops and (char != ":" or index == 0 or text[index - 1] != "\\"):
+                return tuple(nodes), index, char
+            match = _ORDINARY_TOKEN.match(text, index)
+            if match:
+                # The cleaned upstream properties entry is lower-cased.  The
+                # builder restores source spelling after validation, so token
+                # identity is intentionally case-insensitive here.
+                nodes.append(("atom", match.group(0).casefold()))
+                index = match.end()
+                continue
+            index += 1
+        return tuple(nodes), index, None
+
+    def parse_conditional(start: int):
+        header_end = text.find("]?", start + 2)
+        if header_end < 0:
+            return None, start
+        first, separator, delimiter = segment(header_end + 2, {":", "}"})
+        if first is None or delimiter != ":":
+            return None, start
+        second, close, delimiter = segment(separator + 1, {"}"})
+        if second is None or delimiter != "}":
+            return None, start
+        header = text[start : header_end + 2].casefold()
+        return ("conditional", header, first, second), close + 1
+
+    signature, end, delimiter = segment(0, set())
+    if signature is None or delimiter is not None or end != len(text):
+        return _legacy_format_signature(text)
+    return signature
 
 
 def _repair_simple_conditional_boundaries(source: str, candidate: str) -> str:
@@ -214,19 +247,106 @@ def _translate_without_tokens(text: str, provider: Callable[[str], str]) -> str:
     return "".join(result)
 
 
-def translate_preserving_tokens(text: str, provider: Callable[[str], str]) -> str:
-    """Translate text while guaranteeing that WAKFU tokens survive.
+def _conditional_bounds(text: str, start: int) -> tuple[int, int, int] | None:
+    """Return ``(header_end, separator, close)`` for a WAKFU conditional.
 
-    The normal path keeps surrounding context in one provider call.  If the
-    provider changes a sentinel, the segmented retry avoids sending tokens to
-    the model at all while retaining the same fail-closed validation later in
-    the pipeline.
+    The first colon and closing brace owned by the outer conditional delimit
+    its two branches.  Nested conditionals are skipped as a unit, while an
+    escaped punctuation character remains ordinary branch prose.
     """
+    if not text.startswith("{[", start):
+        return None
+    header_end = text.find("]?", start + 2)
+    if header_end < 0:
+        return None
+    index = header_end + 2
+    depth = 1
+    separator = -1
+    while index < len(text):
+        if text.startswith("{[", index):
+            nested_header_end = text.find("]?", index + 2)
+            if nested_header_end < 0:
+                return None
+            depth += 1
+            index = nested_header_end + 2
+            continue
+        char = text[index]
+        if char == "\\":
+            # A backslash protects the following character from being treated
+            # as a branch delimiter or a conditional close.
+            index += 2
+            continue
+        if char == ":" and depth == 1 and separator < 0:
+            separator = index
+        elif char == "}":
+            depth -= 1
+            if depth == 0:
+                return (header_end + 2, separator, index) if separator >= 0 else None
+        index += 1
+    return None
+
+
+def _translate_plain_preserving_tokens(text: str, provider: Callable[[str], str]) -> str:
+    """Translate a non-conditional span while keeping markup/placeholders."""
+    if not text or not text.strip():
+        return text
+    # Avoid asking Argos to translate a span made solely of technical atoms.
+    if not _ORDINARY_TOKEN.sub("", text).strip():
+        return text
     masked, tokens = mask_tokens(text)
     try:
         return restore_tokens(provider(masked), tokens)
     except VerificationError:
         return _translate_without_tokens(text, provider)
+
+
+def _translate_conditionals(text: str, provider: Callable[[str], str]) -> str:
+    """Translate visible prose in and around conditionals recursively.
+
+    Conditional headers, separators, braces and ordinary format atoms stay in
+    the local process.  Only the natural-language spans are sent to Argos, so
+    a branch such as ``{[=1]?damage:damage}`` can be translated without giving
+    the provider an opportunity to rewrite the runtime syntax.
+    """
+    pieces: list[str] = []
+    cursor = 0
+    index = 0
+    found = False
+    while index < len(text):
+        if text.startswith("{[", index):
+            bounds = _conditional_bounds(text, index)
+            if bounds is None:
+                index += 2
+                continue
+            found = True
+            header_end, separator, close = bounds
+            pieces.append(_translate_plain_preserving_tokens(text[cursor:index], provider))
+            pieces.append(text[index:header_end])
+            pieces.append(_translate_conditionals(text[header_end:separator], provider))
+            pieces.append(":")
+            pieces.append(_translate_conditionals(text[separator + 1:close], provider))
+            pieces.append("}")
+            cursor = close + 1
+            index = cursor
+            continue
+        index += 1
+    if not found:
+        return _translate_plain_preserving_tokens(text, provider)
+    pieces.append(_translate_plain_preserving_tokens(text[cursor:], provider))
+    return "".join(pieces)
+
+
+def translate_preserving_tokens(text: str, provider: Callable[[str], str]) -> str:
+    """Translate text while guaranteeing that WAKFU tokens survive.
+
+    Ordinary text keeps surrounding context in one provider call.  Conditional
+    branches are split recursively so their player-visible words are also
+    translated; only their technical structure is kept opaque.  If a provider
+    changes a sentinel, the segmented retry avoids sending tokens to the model
+    at all while retaining the same fail-closed validation later in the
+    pipeline.
+    """
+    return _translate_conditionals(text, provider) if "{[" in text else _translate_plain_preserving_tokens(text, provider)
 
 
 def _conditional_shape(text: str) -> list[str]:
@@ -259,18 +379,36 @@ def format_ok(source: str, target: str) -> bool:
     """Validate syntax atoms while allowing conditional text to translate."""
     source_signature = _format_signature(source)
     target_signature = _format_signature(target)
-    return source_signature is not None and source_signature == target_signature
+    return source_signature == target_signature
 
 
-def resolve_changes(changes: Iterable[Record], *, translations: dict, manual: dict, terms: tuple[dict, dict, dict], argos: Callable[[str], str] | None = None) -> tuple[dict[str, str], dict[str, str]]:
-    """Return proposals and their source. Existing TM is never overwritten."""
+def resolve_changes(
+    changes: Iterable[Record],
+    *,
+    translations: dict,
+    manual: dict,
+    terms: tuple[dict, dict, dict],
+    argos: Callable[[str], str] | None = None,
+    memory_sources: dict[str, str] | None = None,
+) -> tuple[dict[str, str], dict[str, str]]:
+    """Return proposals and their source.
+
+    Key-only memory is deliberately not trusted: a game update can reuse a
+    key for a completely different English sentence.  A remembered value is
+    eligible only when its companion source hash matches the current record.
+    """
     term_keys, term_values, _phrases = terms
     output: dict[str, str] = {}
     origin: dict[str, str] = {}
     for record in changes:
         candidate = None
         if record.key in manual: candidate, source = str(manual[record.key]), "manual"
-        elif record.key in translations and str(translations[record.key]).strip(): candidate, source = str(translations[record.key]), "memory"
+        elif (
+            record.key in translations
+            and str(translations[record.key]).strip()
+            and memory_source_matches(record, memory_sources)
+        ):
+            candidate, source = str(translations[record.key]), "memory"
         elif record.key in term_keys: candidate, source = str(term_keys[record.key]), "glossary-key"
         elif record.source in term_values: candidate, source = str(term_values[record.source]), "glossary-value"
         elif argos is not None:
@@ -297,11 +435,14 @@ def resolve_changes(changes: Iterable[Record], *, translations: dict, manual: di
 
 
 def validate_proposals(*, diff: dict[str, list[Record]], proposals: dict[str, str], baseline_translations: dict[str, str]) -> None:
+    baseline_before = dict(baseline_translations)
     current = {r.identity: r for kind in ("UNCHANGED", "NEW", "MODIFIED") for r in diff[kind]}
     for identity, value in proposals.items():
         if identity not in current: raise VerificationError("proposal references unknown record: " + identity)
         if identity in {r.identity for r in diff["UNCHANGED"]}: raise VerificationError("UNCHANGED record was modified: " + identity)
         if not value.strip() or not format_ok(current[identity].source, value): raise VerificationError("invalid proposal: " + identity)
-    # Translation memory is keyed by original game key. Ensure a proposal does
-    # not mutate it in place; the PR writer must emit only candidate review data.
-    if any(key not in baseline_translations for key in []): raise AssertionError("unreachable guard")
+    # Translation memory is supplied as an immutable baseline snapshot.  Keep
+    # this invariant explicit so future validators cannot silently mutate the
+    # caller's dictionary while checking proposals.
+    if baseline_translations != baseline_before:
+        raise AssertionError("baseline translation snapshot was mutated")
