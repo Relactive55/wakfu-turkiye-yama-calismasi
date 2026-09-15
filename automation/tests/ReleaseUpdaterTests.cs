@@ -27,10 +27,19 @@ static class ReleaseUpdaterTests {
         HttpListener server;
         internal LocalFakeGitHubTransport(Dictionary<string, ResponseSpec> routeMap) { routes = routeMap; endpoint = new Uri("http://127.0.0.1:" + FreePort() + "/"); }
         static int FreePort() { var listener = new System.Net.Sockets.TcpListener(System.Net.IPAddress.Loopback, 0); listener.Start(); int port = ((System.Net.IPEndPoint)listener.LocalEndpoint).Port; listener.Stop(); return port; }
-        ResponseSpec Resolve(string path) { ResponseSpec spec; if (routes.TryGetValue(path, out spec)) return spec; return new ResponseSpec { StatusCode = 404, Body = Encoding.UTF8.GetBytes("not found") }; }
+        ResponseSpec Resolve(string path) {
+            ResponseSpec spec;
+            if (routes.TryGetValue(path, out spec)) return spec;
+            // The production updater asks GitHub for /releases?per_page=100;
+            // older fixtures used the former /releases/latest route.  Keep
+            // those fixtures valid while still exposing the exact requested
+            // path to newer tests.
+            if (path.EndsWith("/releases?per_page=100", StringComparison.Ordinal) && routes.TryGetValue(path.Substring(0, path.IndexOf("?", StringComparison.Ordinal)) + "/latest", out spec)) return spec;
+            return new ResponseSpec { StatusCode = 404, Body = Encoding.UTF8.GetBytes("not found") };
+        }
         public ReleaseHttpResponse Get(Uri requested, string accept, long maximumBytes) {
             server = new HttpListener(); server.Prefixes.Add(endpoint.AbsoluteUri); server.Start();
-            ResponseSpec spec = Resolve(requested.AbsolutePath);
+            ResponseSpec spec = Resolve(requested.AbsolutePath + requested.Query);
             var worker = new Thread(delegate() {
                 try {
                     HttpListenerContext context = server.GetContext();
@@ -100,6 +109,16 @@ static class ReleaseUpdaterTests {
 
     static void TestStableReleaseFlags() {
         var fixture = new Fixture(); string draft = fixture.ReleaseJson.Replace("\"draft\":false", "\"draft\":true"); string prerelease = fixture.ReleaseJson.Replace("\"prerelease\":false", "\"prerelease\":true"); ExpectFailure("draft release accepted", delegate { WakfuReleaseUpdater.ParseLatestRelease(draft); }); ExpectFailure("prerelease release accepted", delegate { WakfuReleaseUpdater.ParseLatestRelease(prerelease); });
+    }
+
+    static void TestReleaseListSelection() {
+        var fixture = new Fixture();
+        string newer = fixture.ReleaseJson.Replace("\"id\":12", "\"id\":99").Replace("2026.09.05.2", "2026.09.15.1");
+        string installer = "{\"id\":100,\"tag_name\":\"installer-6.5.13\",\"draft\":false,\"prerelease\":false,\"assets\":[{\"id\":101,\"name\":\"Wakfu.Turkce.Yama.exe\",\"size\":10}]}";
+        var selected = WakfuReleaseUpdater.ParseLatestReleaseList("[" + installer + "," + fixture.ReleaseJson + "," + newer + "]");
+        Require(selected.Id == 99 && selected.Tag == "tr-2026.09.15.1", "release list did not select the newest tr-* patch");
+        var noPatch = "[" + installer + "]";
+        ExpectFailure("installer-only release list accepted", delegate { WakfuReleaseUpdater.ParseLatestReleaseList(noPatch); });
     }
 
     static void TestFakeHttpEndToEnd(string root) {
@@ -206,7 +225,7 @@ static class ReleaseUpdaterTests {
     [STAThread] static int Main() {
         string root = Path.Combine(Path.GetTempPath(), "WakfuReleaseUpdaterTests_" + Guid.NewGuid().ToString("N")); Directory.CreateDirectory(root);
         try {
-            var tests = new Dictionary<string, Action> { { "contract/hash/allowlist", delegate { TestContractAndHash(root); } }, { "stable Release draft/prerelease filtering", TestStableReleaseFlags }, { "fake Release network E2E", delegate { TestFakeHttpEndToEnd(root); } }, { "HTTP failure matrix", delegate { TestHttpFailureMatrix(root); } }, { "patch version parser", TestPatchVersions }, { "install/backup/state/rollback", delegate { TestInstallAndRollback(root); } }, { "transaction rollback primitive", delegate { TestRollbackPrimitive(root); } } };
+            var tests = new Dictionary<string, Action> { { "contract/hash/allowlist", delegate { TestContractAndHash(root); } }, { "stable Release draft/prerelease filtering", TestStableReleaseFlags }, { "release list selection", TestReleaseListSelection }, { "fake Release network E2E", delegate { TestFakeHttpEndToEnd(root); } }, { "HTTP failure matrix", delegate { TestHttpFailureMatrix(root); } }, { "patch version parser", TestPatchVersions }, { "install/backup/state/rollback", delegate { TestInstallAndRollback(root); } }, { "transaction rollback primitive", delegate { TestRollbackPrimitive(root); } } };
             string external = Environment.GetEnvironmentVariable("WAKFU_FULL_SIMULATION_FIXTURE");
             if (!String.IsNullOrWhiteSpace(external)) tests.Add("full simulated external Release -> Setup", delegate { TestExternalFullSimulation(external); });
             foreach (var test in tests) { test.Value(); Console.WriteLine("PASS|" + test.Key); }

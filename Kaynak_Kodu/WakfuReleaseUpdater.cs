@@ -69,6 +69,11 @@ internal static class WakfuReleaseUpdater {
     internal const string PatchAssetName = "i18n.jar";
     internal const long MaximumManifestBytes = 256 * 1024;
     internal const long MaximumPatchBytes = 512L * 1024 * 1024;
+    // The GitHub /releases/latest endpoint is also used by the installer
+    // releases.  Query the release list instead and select only tr-* patch
+    // releases.  Keep a separate, slightly larger limit for the list
+    // response because it contains metadata for multiple releases.
+    internal const long MaximumReleaseListBytes = 4L * 1024 * 1024;
 #if WAKFU_TESTS
     internal static IReleaseHttpTransport TestTransportOverride;
 #endif
@@ -85,7 +90,10 @@ internal static class WakfuReleaseUpdater {
         try { ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12; } catch { }
     }
 
+    // Kept for compatibility with the internal test seam and allow-list
+    // checks.  Production update checks use ReleaseListUri below.
     internal static Uri LatestReleaseUri { get { return new Uri(ApiBase + "/releases/latest"); } }
+    internal static Uri ReleaseListUri { get { return new Uri(ApiBase + "/releases?per_page=100"); } }
 
     // Fixed production transport. The shipped Setup has no endpoint setting;
     // tests provide a separate internal implementation.
@@ -108,10 +116,10 @@ internal static class WakfuReleaseUpdater {
 
     internal static LatestPatchRelease GetLatestRelease(IReleaseHttpTransport transport) {
         if (transport == null) throw new ArgumentNullException("transport");
-        ReleaseHttpResponse response;try{response=transport.Get(LatestReleaseUri,"application/vnd.github+json",MaximumManifestBytes);}catch(ReleaseUpdateException){throw;}catch(Exception ex){throw new ReleaseUpdateException("GitHub latest Release isteği tamamlanamadı.",ex);}
-        if(response==null||response.StatusCode!=200||response.Body==null||response.Body.Length==0||response.Body.Length>MaximumManifestBytes)throw new ReleaseUpdateException("GitHub latest Release yanıtı geçersiz.");
-        if(response.ContentLength>=0&&response.ContentLength!=response.Body.Length)throw new ReleaseUpdateException("GitHub latest Release Content-Length uyuşmuyor.");
-        return ParseLatestRelease(Encoding.UTF8.GetString(response.Body));
+        ReleaseHttpResponse response;try{response=transport.Get(ReleaseListUri,"application/vnd.github+json",MaximumReleaseListBytes);}catch(ReleaseUpdateException){throw;}catch(Exception ex){throw new ReleaseUpdateException("GitHub Release listesi isteği tamamlanamadı.",ex);}
+        if(response==null||response.StatusCode!=200||response.Body==null||response.Body.Length==0||response.Body.Length>MaximumReleaseListBytes)throw new ReleaseUpdateException("GitHub Release listesi yanıtı geçersiz.");
+        if(response.ContentLength>=0&&response.ContentLength!=response.Body.Length)throw new ReleaseUpdateException("GitHub Release listesi Content-Length uyuşmuyor.");
+        return ParseLatestReleaseList(Encoding.UTF8.GetString(response.Body));
     }
 
     internal static bool IsAllowedDownloadUri(Uri uri) {
@@ -139,18 +147,30 @@ internal static class WakfuReleaseUpdater {
         return result;
     }
 
-    static Dictionary<string, object> DeserializeObject(string json, string label) {
+    static object DeserializeJson(string json, string label) {
         try {
             var serializer = new JavaScriptSerializer { MaxJsonLength = Int32.MaxValue };
-            var value = serializer.DeserializeObject(json) as Dictionary<string, object>;
-            if (value == null) throw new ReleaseUpdateException(label + " JSON nesnesi değil.");
+            var value = serializer.DeserializeObject(json);
+            if (value == null) throw new ReleaseUpdateException(label + " JSON'u boş.");
             return value;
         } catch (ReleaseUpdateException) { throw; }
         catch (Exception ex) { throw new ReleaseUpdateException(label + " JSON'u okunamadı.", ex); }
     }
 
-    internal static LatestPatchRelease ParseLatestRelease(string json) {
-        var map = DeserializeObject(json, "GitHub Release");
+    static Dictionary<string, object> DeserializeObject(string json, string label) {
+        var value = DeserializeJson(json, label) as Dictionary<string, object>;
+        if (value == null) throw new ReleaseUpdateException(label + " JSON nesnesi değil.");
+        return value;
+    }
+
+    static object[] DeserializeArray(string json, string label) {
+        var value = DeserializeJson(json, label) as object[];
+        if (value == null) throw new ReleaseUpdateException(label + " JSON dizisi değil.");
+        return value;
+    }
+
+    static LatestPatchRelease ParseReleaseMap(Dictionary<string, object> map) {
+        if (map == null) throw new ReleaseUpdateException("GitHub Release JSON nesnesi değil.");
         object draft, prerelease, rawAssets;
         if (!map.TryGetValue("draft", out draft) || Convert.ToBoolean(draft, CultureInfo.InvariantCulture)) throw new ReleaseUpdateException("Taslak Release kullanılmaz.");
         if (!map.TryGetValue("prerelease", out prerelease) || Convert.ToBoolean(prerelease, CultureInfo.InvariantCulture)) throw new ReleaseUpdateException("Ön-sürüm Release kullanılmaz.");
@@ -171,6 +191,54 @@ internal static class WakfuReleaseUpdater {
         if (!assets.TryGetValue(ManifestAssetName, out manifest) || manifest.Size > MaximumManifestBytes) throw new ReleaseUpdateException("Release manifest.json asset'i eksik veya çok büyük.");
         if (!assets.TryGetValue(PatchAssetName, out patch)) throw new ReleaseUpdateException("Release i18n.jar asset'i eksik.");
         return new LatestPatchRelease { Id = id, Tag = tag, Assets = assets };
+    }
+
+    internal static LatestPatchRelease ParseLatestRelease(string json) {
+        return ParseReleaseMap(DeserializeObject(json, "GitHub Release"));
+    }
+
+    static bool TryParsePatchTag(string tag, out PatchVersion version) {
+        version = null;
+        if (String.IsNullOrWhiteSpace(tag) || !tag.StartsWith("tr-", StringComparison.Ordinal)) return false;
+        string value = tag.Substring(3);
+        if (!PatchVersionPattern.IsMatch(value)) return false;
+        try { version = PatchVersion.Parse(value); return true; } catch (ReleaseUpdateException) { return false; }
+    }
+
+    // GitHub sorts this endpoint by publication time, but the patch version is
+    // the authoritative ordering for the updater.  Ignore installer/runtime
+    // releases and malformed or draft candidates, then choose the greatest
+    // valid tr-YYYY.MM.DD.N version.
+    internal static LatestPatchRelease ParseLatestReleaseList(string json) {
+        object[] list;
+        try { list = DeserializeArray(json, "GitHub Release listesi"); }
+        catch (ReleaseUpdateException) {
+            // A single-release object is accepted for old test fixtures and
+            // private mirrors; production GitHub responses are arrays.
+            return ParseLatestRelease(json);
+        }
+        LatestPatchRelease selected = null;
+        PatchVersion selectedVersion = null;
+        foreach (object raw in list) {
+            var map = raw as Dictionary<string, object>;
+            if (map == null) continue;
+            object rawTag;
+            if (!map.TryGetValue("tag_name", out rawTag) || !(rawTag is string)) continue;
+            PatchVersion candidateVersion;
+            if (!TryParsePatchTag((string)rawTag, out candidateVersion)) continue;
+            try {
+                var candidate = ParseReleaseMap(map);
+                if (selected == null || candidateVersion.CompareTo(selectedVersion) > 0) {
+                    selected = candidate;
+                    selectedVersion = candidateVersion;
+                }
+            } catch (ReleaseUpdateException) {
+                // An incomplete draft/installer or a broken old release must
+                // not hide the newest valid yama release.
+            }
+        }
+        if (selected == null) throw new ReleaseUpdateException("Yayınlanmış Türkçe yama Release'i bulunamadı.");
+        return selected;
     }
 
     internal static PatchManifest ParseManifest(string json, string releaseTag) {
