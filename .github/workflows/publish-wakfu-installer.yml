@@ -91,6 +91,9 @@ jobs:
         with:
           ref: main
           fetch-depth: 1
+      - uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
+        with:
+          python-version: '3.11'
       - name: Prepare release directories
         shell: pwsh
         run: |
@@ -116,10 +119,7 @@ jobs:
           $seedExe = Get-ChildItem -LiteralPath $download -Filter '*.exe' -File | Select-Object -First 1
           if($null -eq $seedExe){throw 'Seed installer EXE bulunamadı.'}
           $assembly = [Reflection.Assembly]::LoadFile($seedExe.FullName)
-          $map = [ordered]@{
-            'WakfuPatch.base_i18n.jar' = 'Oyun_Kaynaklari\Orijinal_Yedek\i18n_en.jar'
-            'WakfuPatch.almanax_bgU.class' = 'Oyun_Kaynaklari\Yamalar\almanax_bgU.class'
-          }
+          $map = [ordered]@{'WakfuPatch.almanax_bgU.class' = 'Oyun_Kaynaklari\Yamalar\almanax_bgU.class'}
           foreach($font in @('asul.ttf','asulb.ttf','bagnard.ttf','coprgtb.ttf','coprgtl.ttf','droidsansfallbackfull.ttf','fzlibian.ttf','londrina.ttf','lucidacally.ttf')){$map['WakfuPatch.'+$font]='Oyun_Kaynaklari\Fontlar\'+$font}
           foreach($item in $map.GetEnumerator()){
             $stream=$assembly.GetManifestResourceStream($item.Key)
@@ -127,9 +127,31 @@ jobs:
             $destination=Join-Path $root $item.Value
             try{$file=[IO.File]::Create($destination);try{$stream.CopyTo($file)}finally{$file.Dispose()}}finally{$stream.Dispose()}
           }
-          $manifest=Get-Content -LiteralPath (Join-Path $root 'Uretilenler\manifest.json') -Raw | ConvertFrom-Json
-          $baseHash=(Get-FileHash -LiteralPath (Join-Path $root 'Oyun_Kaynaklari\Orijinal_Yedek\i18n_en.jar') -Algorithm SHA256).Hash
-          if([string]::IsNullOrWhiteSpace([string]$manifest.source_i18n_sha256) -or $baseHash -ne [string]$manifest.source_i18n_sha256){throw 'Seed installer temiz i18n_en.jar kaynağı güncel patch ile eşleşmiyor; güvenli otomatik yayın durduruldu.'}
+          $manifestPath=Join-Path $root 'Uretilenler\manifest.json'
+          $manifest=Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+          if([string]::IsNullOrWhiteSpace([string]$manifest.game_version) -or [string]::IsNullOrWhiteSpace([string]$manifest.source_i18n_sha256)){throw 'Patch manifest temiz oyun kaynağı bilgilerini içermiyor.'}
+          $downloadScript=Join-Path $env:RUNNER_TEMP 'download_current_i18n.py'
+          @'
+          import json, pathlib, sys, time
+          from automation.ankama_cdn import AnkamaCdnClient
+          manifest = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding='utf-8'))
+          destination = pathlib.Path(sys.argv[2])
+          last = None
+          for attempt in range(3):
+              try:
+                  entry = AnkamaCdnClient(timeout_seconds=60).download_localization(manifest['game_version'], destination)
+                  print(entry.sha1)
+                  break
+              except Exception as exc:
+                  last = exc
+                  if attempt == 2:
+                      raise
+                  time.sleep(10)
+          '@ | Set-Content -LiteralPath $downloadScript -Encoding utf8
+          $sourcePath=Join-Path $root 'Oyun_Kaynaklari\Orijinal_Yedek\i18n_en.jar'
+          python $downloadScript $manifestPath $sourcePath
+          $sourceHash=(Get-FileHash -LiteralPath $sourcePath -Algorithm SHA256).Hash
+          if($sourceHash -ne [string]$manifest.source_i18n_sha256){throw 'Ankama CDN temiz i18n_en.jar hash doğrulaması başarısız; güvenli otomatik yayın durduruldu.'}
       - name: Build and verify installer
         shell: pwsh
         run: |
