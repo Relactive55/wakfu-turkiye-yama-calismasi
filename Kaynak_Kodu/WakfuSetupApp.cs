@@ -19,8 +19,8 @@ using Microsoft.Win32;
 [assembly: AssemblyCompany("Wakfu Türkçe Yama Topluluğu")]
 [assembly: AssemblyProduct("Wakfu Türkçe Yama")]
 [assembly: AssemblyCopyright("Copyright © 2026 Wakfu Türkçe Yama Topluluğu")]
-[assembly: AssemblyVersion("6.5.15.0")]
-[assembly: AssemblyFileVersion("6.5.15.0")]
+[assembly: AssemblyVersion("6.5.16.0")]
+[assembly: AssemblyFileVersion("6.5.16.0")]
 [assembly: AssemblyInformationalVersion("Wakfu Türkçe Yama")]
 
 static class WakfuSetupApp {
@@ -603,21 +603,34 @@ static class WakfuSetupApp {
         finally{if(!preserveTransaction)try{Directory.Delete(transaction,true);}catch{}}
     }
 
+    sealed class TopAlignedImageBox:Control {
+        internal Image Image;
+        internal TopAlignedImageBox(){SetStyle(ControlStyles.UserPaint|ControlStyles.AllPaintingInWmPaint|ControlStyles.OptimizedDoubleBuffer|ControlStyles.ResizeRedraw|ControlStyles.Opaque,true);}
+        protected override void OnPaintBackground(PaintEventArgs e){e.Graphics.Clear(BackColor);}
+        protected override void OnPaint(PaintEventArgs e){
+            if(Image==null||Width<=0||Height<=0)return;e.Graphics.CompositingQuality=CompositingQuality.HighQuality;e.Graphics.InterpolationMode=InterpolationMode.HighQualityBicubic;e.Graphics.PixelOffsetMode=PixelOffsetMode.HighQuality;e.Graphics.SmoothingMode=SmoothingMode.HighQuality;
+            double scale=Math.Min((double)Width/Image.Width,(double)Height/Image.Height);int drawWidth=Math.Max(1,(int)Math.Round(Image.Width*scale));int drawHeight=Math.Max(1,(int)Math.Round(Image.Height*scale));int x=(Width-drawWidth)/2;e.Graphics.DrawImage(Image,new Rectangle(x,0,drawWidth,drawHeight),0,0,Image.Width,Image.Height,GraphicsUnit.Pixel);
+        }
+        protected override void Dispose(bool disposing){if(disposing&&Image!=null){Image.Dispose();Image=null;}base.Dispose(disposing);}
+    }
     sealed class RoundedSurface:Panel {
-        internal Color SurfaceColor=Color.FromArgb(226,14,23,32);
+        internal Color SurfaceColor=Color.FromArgb(14,23,32);
         internal Color BorderColor=Color.FromArgb(218,166,104);
         internal int CornerRadius=22;
-        internal RoundedSurface(){SetStyle(ControlStyles.UserPaint|ControlStyles.AllPaintingInWmPaint|ControlStyles.OptimizedDoubleBuffer|ControlStyles.SupportsTransparentBackColor,true);BackColor=Color.Transparent;}
+        internal RoundedSurface(){SetStyle(ControlStyles.UserPaint|ControlStyles.AllPaintingInWmPaint|ControlStyles.OptimizedDoubleBuffer|ControlStyles.ResizeRedraw,true);BackColor=SurfaceColor;}
         protected override void OnResize(EventArgs e){base.OnResize(e);using(var path=RoundedPath(new Rectangle(0,0,Math.Max(1,Width-1),Math.Max(1,Height-1)),CornerRadius))Region=new Region(path);}
-        protected override void OnPaintBackground(PaintEventArgs e){}
-        protected override void OnPaint(PaintEventArgs e){e.Graphics.SmoothingMode=SmoothingMode.AntiAlias;using(var path=RoundedPath(new Rectangle(0,0,Math.Max(1,Width-1),Math.Max(1,Height-1)),CornerRadius))using(var fill=new SolidBrush(SurfaceColor))using(var pen=new Pen(BorderColor,1.5f)){e.Graphics.FillPath(fill,path);e.Graphics.DrawPath(pen,path);}}
+        protected override void OnPaintBackground(PaintEventArgs e){e.Graphics.Clear(SurfaceColor);}
+        protected override void OnPaint(PaintEventArgs e){e.Graphics.SmoothingMode=SmoothingMode.AntiAlias;using(var path=RoundedPath(new Rectangle(0,0,Math.Max(1,Width-1),Math.Max(1,Height-1)),CornerRadius))using(var pen=new Pen(BorderColor,1.5f))e.Graphics.DrawPath(pen,path);}
     }
     sealed class RoundedActionButton:Button {
         internal Color HoverColor;
+        bool hovered;
         internal RoundedActionButton(){FlatStyle=FlatStyle.Flat;FlatAppearance.BorderSize=0;UseVisualStyleBackColor=false;Cursor=Cursors.Hand;SetStyle(ControlStyles.UserPaint|ControlStyles.AllPaintingInWmPaint|ControlStyles.OptimizedDoubleBuffer,true);}
         protected override void OnResize(EventArgs e){base.OnResize(e);using(var path=RoundedPath(new Rectangle(0,0,Math.Max(1,Width-1),Math.Max(1,Height-1)),12))Region=new Region(path);}
+        protected override void OnMouseEnter(EventArgs e){hovered=true;Invalidate();base.OnMouseEnter(e);}
+        protected override void OnMouseLeave(EventArgs e){hovered=false;Invalidate();base.OnMouseLeave(e);}
         protected override void OnPaintBackground(PaintEventArgs e){}
-        protected override void OnPaint(PaintEventArgs e){e.Graphics.SmoothingMode=SmoothingMode.AntiAlias;Color color=Enabled?(ClientRectangle.Contains(PointToClient(Cursor.Position))?HoverColor:BackColor):Color.FromArgb(90,BackColor);using(var path=RoundedPath(new Rectangle(0,0,Math.Max(1,Width-1),Math.Max(1,Height-1)),12))using(var fill=new SolidBrush(color))using(var textBrush=new SolidBrush(ForeColor)){e.Graphics.FillPath(fill,path);var format=new StringFormat{Alignment=StringAlignment.Center,LineAlignment=StringAlignment.Center,Trimming=StringTrimming.EllipsisCharacter};e.Graphics.DrawString(Text,Font,textBrush,ClientRectangle,format);}}
+        protected override void OnPaint(PaintEventArgs e){e.Graphics.SmoothingMode=SmoothingMode.AntiAlias;e.Graphics.PixelOffsetMode=PixelOffsetMode.HighQuality;Color color=Enabled?(hovered?HoverColor:BackColor):Color.FromArgb(90,BackColor);using(var path=RoundedPath(new Rectangle(0,0,Math.Max(1,Width-1),Math.Max(1,Height-1)),12))using(var fill=new SolidBrush(color))e.Graphics.FillPath(fill,path);TextRenderer.DrawText(e.Graphics,Text,Font,ClientRectangle,ForeColor,TextFormatFlags.HorizontalCenter|TextFormatFlags.VerticalCenter|TextFormatFlags.EndEllipsis|TextFormatFlags.NoPadding);}
     }
     static GraphicsPath RoundedPath(Rectangle bounds,int radius){var path=new GraphicsPath();int diameter=Math.Max(2,Math.Min(radius*2,Math.Min(bounds.Width,bounds.Height)));int r=diameter-1;path.AddArc(bounds.X,bounds.Y,r,r,180,90);path.AddArc(bounds.Right-r,bounds.Y,r,r,270,90);path.AddArc(bounds.Right-r,bounds.Bottom-r,r,r,0,90);path.AddArc(bounds.X,bounds.Bottom-r,r,r,90,90);path.CloseFigure();return path;}
 
@@ -631,9 +644,9 @@ static class WakfuSetupApp {
         public SetupForm(){
             Text="Wakfu Türkçe Yama - Relactive";ClientSize=new Size(720,520);MinimumSize=Size;StartPosition=FormStartPosition.CenterScreen;FormBorderStyle=FormBorderStyle.FixedDialog;MaximizeBox=false;Font=new Font("Segoe UI",10);BackColor=Color.FromArgb(8,16,24);ForeColor=Color.WhiteSmoke;
             try{using(Stream source=Resource("program.ico"))using(var buffer=new MemoryStream()){source.CopyTo(buffer);buffer.Position=0;Icon=new Icon(buffer);}}catch{}
-            var background=new PictureBox{Dock=DockStyle.Fill,SizeMode=PictureBoxSizeMode.Zoom,BackColor=Color.FromArgb(8,16,24),Image=LoadImageResource("program_background.png")};
-            var surface=new RoundedSurface{CornerRadius=12};
-            var label=new Label{Text="Wakfu Oyun Klasörü",ForeColor=Color.WhiteSmoke,Font=new Font("Segoe UI",11,FontStyle.Regular),TextAlign=ContentAlignment.MiddleLeft};
+            var background=new TopAlignedImageBox{Dock=DockStyle.Fill,BackColor=Color.FromArgb(8,16,24),Image=LoadImageResource("program_background.png")};
+            Color panelColor=Color.FromArgb(14,23,32);var surface=new RoundedSurface{CornerRadius=12,SurfaceColor=panelColor,BackColor=panelColor};
+            var label=new Label{Text="Wakfu Oyun Klasörü",BackColor=panelColor,ForeColor=Color.WhiteSmoke,Font=new Font("Segoe UI",10,FontStyle.Regular),TextAlign=ContentAlignment.MiddleLeft};
             path.Text=FindGame();path.BackColor=Color.FromArgb(35,44,56);path.ForeColor=Color.WhiteSmoke;path.BorderStyle=BorderStyle.FixedSingle;path.Font=new Font("Segoe UI",10);path.Margin=Padding.Empty;
             var wakfu=new RoundedActionButton{Text="Gözat...",BackColor=Color.FromArgb(45,53,65),HoverColor=Color.FromArgb(62,72,86),ForeColor=Color.WhiteSmoke,Font=new Font("Segoe UI",10)};
             var overheadLabel=new Label{Text="Nick Font Boyutu:",ForeColor=Color.Gainsboro,Visible=false};overheadSize.DropDownStyle=ComboBoxStyle.DropDownList;overheadSize.BackColor=Color.FromArgb(48,52,60);overheadSize.ForeColor=Color.WhiteSmoke;overheadSize.Items.AddRange(new object[]{"Normal (28 / 24)","Küçük (24 / 20)","Çok küçük (20 / 16) — Önerilen"});overheadSize.Visible=false;string preferred=ReadOverheadPreference();overheadSize.SelectedIndex=preferred=="normal"?0:preferred=="tiny"?2:1;
@@ -641,14 +654,14 @@ static class WakfuSetupApp {
             var restore=new RoundedActionButton{Text="GERİ AL",BackColor=Color.FromArgb(25,141,119),HoverColor=Color.FromArgb(34,169,140),ForeColor=Color.White,Font=new Font("Segoe UI",13,FontStyle.Bold)};
             var support=new RoundedActionButton{Text="DESTEK / BAĞIŞ",BackColor=Color.FromArgb(20,117,221),HoverColor=Color.FromArgb(41,141,239),ForeColor=Color.White,Font=new Font("Segoe UI",11,FontStyle.Regular)};support.Cursor=Cursors.Hand;
             var supportTip=new ToolTip();supportTip.SetToolTip(support,"Shopier destek sayfasını aç");support.MouseEnter+=(s,e)=>{support.Text="Teşekkürler";support.Invalidate();};support.MouseLeave+=(s,e)=>{support.Text="DESTEK / BAĞIŞ";support.Invalidate();};support.Click+=(s,e)=>{try{System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("https://www.shopier.com/poe2tr/50856020"){UseShellExecute=true});}catch(Exception ex){MessageBox.Show("Destek sayfası açılamadı: "+ex.Message,"Bağlantı hatası",MessageBoxButtons.OK,MessageBoxIcon.Warning);}};
-            status.Text="Hazır — Güncellemeler kontrol ediliyor...";status.AutoEllipsis=true;status.ForeColor=Color.White;status.Font=new Font("Segoe UI",9);status.TextAlign=ContentAlignment.MiddleCenter;
-            gameVersionStatus.AutoEllipsis=true;gameVersionStatus.ForeColor=Color.WhiteSmoke;gameVersionStatus.Font=new Font("Segoe UI",11);gameVersionStatus.TextAlign=ContentAlignment.MiddleLeft;
+            status.Text="Hazır — Güncellemeler kontrol ediliyor...";status.AutoEllipsis=true;status.BackColor=panelColor;status.ForeColor=Color.White;status.Font=new Font("Segoe UI",9);status.TextAlign=ContentAlignment.MiddleCenter;
+            gameVersionStatus.AutoEllipsis=true;gameVersionStatus.BackColor=panelColor;gameVersionStatus.ForeColor=Color.WhiteSmoke;gameVersionStatus.Font=new Font("Segoe UI",11);gameVersionStatus.TextAlign=ContentAlignment.MiddleLeft;
             patchStatus.Visible=false;
-            var brand=new Label{Text="Yapım Relactive",Font=new Font("Segoe UI",10,FontStyle.Bold|FontStyle.Italic),ForeColor=Color.FromArgb(220,150,88),TextAlign=ContentAlignment.MiddleRight};
+            var brand=new Label{Text="Yapım Relactive",BackColor=panelColor,Font=new Font("Segoe UI",10,FontStyle.Bold|FontStyle.Italic),ForeColor=Color.FromArgb(220,150,88),TextAlign=ContentAlignment.MiddleRight};
 
             Action layoutSurface=null;layoutSurface=()=>{
                 int w=surface.ClientSize.Width,h=surface.ClientSize.Height,pad=20;int browseWidth=80;int rowY=12,rowH=28;
-                label.SetBounds(pad,rowY,120,rowH);path.SetBounds(pad+120,rowY,Math.Max(120,w-pad*2-120-browseWidth-10),rowH);wakfu.SetBounds(w-pad-browseWidth,rowY,browseWidth,rowH);
+                label.SetBounds(pad,rowY,130,rowH);path.SetBounds(pad+130,rowY,Math.Max(120,w-pad*2-130-browseWidth-10),rowH);wakfu.SetBounds(w-pad-browseWidth,rowY,browseWidth,rowH);
                 int gap=12;int buttonY=53;int installWidth=150;int restoreWidth=150;int supportWidth=120;int groupWidth=installWidth+restoreWidth+supportWidth+gap*2;int groupX=Math.Max(pad,(w-groupWidth)/2);install.SetBounds(groupX,buttonY,installWidth,39);restore.SetBounds(groupX+installWidth+gap,buttonY,restoreWidth,39);support.SetBounds(groupX+installWidth+gap+restoreWidth+gap,buttonY,supportWidth,39);
                 int bottomY=118;gameVersionStatus.SetBounds(pad,bottomY,170,22);status.SetBounds(200,bottomY,340,22);brand.SetBounds(545,bottomY,127,22);patchStatus.SetBounds(0,0,1,1);
                 overheadLabel.SetBounds(0,0,1,1);overheadSize.SetBounds(0,0,1,1);surface.Invalidate();
