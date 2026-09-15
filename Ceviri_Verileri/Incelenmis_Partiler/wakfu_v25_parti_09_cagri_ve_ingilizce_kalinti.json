@@ -1,7 +1,7 @@
 {
   "source_keys": {
     "critere.getTotalLeadership": "Çağrıların toplam seviyesi",
-    "japan.expo.2023.wave.info": "Bu Savaşta Yenilen Dalgalar: <b color=\"FF6A00\">[#1]</b>\\n\\nMevcut Dalga: <b color=\"2FC2B7\">[#2]</b>{[+3]?\\n\\n<b color=\"D71313\">Rushu'ya Verilen Hasar: [#3]</b>:}",
+    "japan.expo.2023.wave.info": "Bu Savaşta Yenilen Dalgalar: <b color=\"FF6A00\">[#1]</b>\\n\\nMevcut Dalga: <b color=\"2FC2B7\">[#2]</b>{[+3]?\\n\\n<b color=\"D71313\">Rushu'ya Verilen Hasar — [#3]</b>:}",
     "paw": "Bir çağrı üzerinde",
     "quest.ereboria.zone.03.09": "**\"Bwork salyası yatağında biralı Dragoturkey\"... Bu bir tarif olabilir mi?",
     "quest.nation.ch2.donjonaventure.tuto.teamcroquette.desc02": "- Çağrılar en güçlü kozlarıdır; her birinde üç tane olsa da burada bir açık olabilir.\\n- Miouze yalnız kalmadığı sürece savaşmaya devam eder.\\n- Jemmy ile Janes sonuna kadar birbirleri için savaşır; ikisini birden devirmek çözüm olabilir.",

@@ -29,6 +29,8 @@ _ORDINARY_TOKEN = re.compile(
 _SIMPLE_CONDITIONAL = re.compile(r"\{\[[^\]]+\]\?(?:s|es)?:\}")
 _CONDITIONAL_MARKER = re.compile(r"\{\[[^\]]+\]\?(?:[^{}]|\\.)*\}")
 _CONDITIONAL_HEADER = re.compile(r"\{\[[^\]]+\]\?")
+_LEGACY_CONDITIONAL_HEADER = re.compile(r"\{\[[^?\r\n]{0,128}\?")
+_NORMAL_CONDITIONAL_HEADER = re.compile(r"\{\[[^\]{}\r\n?]*\]\?")
 
 
 @dataclass(frozen=True)
@@ -45,20 +47,95 @@ def source_fingerprint(source: str) -> str:
     return hashlib.sha256(source.encode("utf-8")).hexdigest()
 
 
-def memory_source_matches(record: Record, memory_sources: dict[str, str] | None) -> bool:
-    """Require a source hash before a remembered translation can be reused.
+_SOURCE_HASH = re.compile(r"^[0-9a-fA-F]{64}$")
+_SOURCE_METADATA_NAMESPACES = ("memory", "manual", "glossary_keys")
 
-    The project translation file intentionally stays a compact key-to-value
-    map.  Its companion source map records which exact English text was
-    reviewed for each key.  Missing metadata is treated as untrusted legacy
-    memory and must go through Argos or manual review again.
+
+def _source_metadata_bucket(metadata: dict | None, namespace: str) -> dict:
+    """Return one source-approval bucket, accepting the old flat memory map."""
+    if not isinstance(metadata, dict):
+        return {}
+    bucket = metadata.get(namespace)
+    if isinstance(bucket, dict):
+        return bucket
+    # Before schema 3 the sidecar was a flat key -> hash memory map.  It is
+    # safe to interpret that legacy shape only as the memory bucket; manual
+    # and glossary approvals must never inherit it implicitly.
+    if namespace == "memory" and not any(name in metadata for name in _SOURCE_METADATA_NAMESPACES):
+        return metadata
+    return {}
+
+
+def _source_metadata_hashes(metadata: dict | None, namespace: str, key: str) -> set[str]:
+    raw = _source_metadata_bucket(metadata, namespace).get(key)
+    if isinstance(raw, str):
+        values = [raw]
+    elif isinstance(raw, (list, tuple, set)):
+        values = list(raw)
+    elif isinstance(raw, dict):
+        values = raw.get("sources", [])
+        if isinstance(values, str):
+            values = [values]
+    else:
+        values = []
+    return {value.casefold() for value in values if isinstance(value, str) and _SOURCE_HASH.fullmatch(value)}
+
+
+def source_metadata_matches(
+    record: Record,
+    metadata: dict | None,
+    namespace: str,
+    *,
+    package_sha1: str | None = None,
+    allow_legacy_package: bool = False,
+) -> bool:
+    """Check that an approval belongs to this exact English source text.
+
+    A package-level approval is supported only for the one-time migration of
+    legacy records.  Changed keys can be listed in ``invalidated`` so that a
+    package-level approval cannot accidentally revive an old manual value.
+    New and modified records in the updater call this with the strict default
+    and therefore require a per-key SHA-256 source record.
     """
-    if not isinstance(memory_sources, dict):
+    if namespace not in _SOURCE_METADATA_NAMESPACES:
+        raise ValueError(f"unknown source metadata namespace: {namespace}")
+    expected = source_fingerprint(record.source)
+    if expected in _source_metadata_hashes(metadata, namespace, record.key):
+        return True
+    if not allow_legacy_package or not isinstance(metadata, dict):
         return False
-    recorded = memory_sources.get(record.key)
-    if not isinstance(recorded, str) or not re.fullmatch(r"[0-9a-fA-F]{64}", recorded):
+    if not isinstance(package_sha1, str) or str(metadata.get("source_sha1", "")).casefold() != package_sha1.casefold():
         return False
-    return recorded.casefold() == source_fingerprint(record.source)
+    invalidated = metadata.get("invalidated", {})
+    if not isinstance(invalidated, dict):
+        return False
+    keys = invalidated.get(namespace, [])
+    return record.key not in keys if isinstance(keys, list) else False
+
+
+def memory_source_matches(
+    record: Record,
+    memory_sources: dict | None,
+    *,
+    package_sha1: str | None = None,
+    allow_legacy_package: bool = False,
+) -> bool:
+    """Require a source hash before a remembered translation can be reused."""
+    return source_metadata_matches(
+        record,
+        memory_sources,
+        "memory",
+        package_sha1=package_sha1,
+        allow_legacy_package=allow_legacy_package,
+    )
+
+
+def manual_source_matches(record: Record, metadata: dict | None) -> bool:
+    return source_metadata_matches(record, metadata, "manual")
+
+
+def glossary_key_source_matches(record: Record, metadata: dict | None) -> bool:
+    return source_metadata_matches(record, metadata, "glossary_keys")
 
 
 def records_from_jar(jar: Path) -> list[Record]:
@@ -98,21 +175,21 @@ def same_tokens(source: str, target: str) -> bool:
     return [m.group() for m in TOKEN.finditer(source)] == [m.group() for m in TOKEN.finditer(target)]
 
 
-def _legacy_format_signature(text: str) -> tuple:
-    """Keep compatibility with legacy conditionals without a false branch.
-
-    A few shipped strings use ``{[condition]?}`` (or contain an already
-    malformed historical header).  They cannot be represented by the normal
-    two-branch tree, but rejecting an unchanged reviewed value would make the
-    builder silently drop existing translations.  The fallback compares the
-    available headers, atoms and punctuation shape conservatively; all
-    well-formed conditionals still use the branch-aware parser below.
-    """
-    headers = tuple(match.group(0).casefold() for match in _CONDITIONAL_HEADER.finditer(text))
-    stripped = _CONDITIONAL_HEADER.sub(" ", text)
+def _legacy_body_signature(text: str) -> tuple:
+    """Capture only technical atoms in one legacy conditional body."""
+    # Historical strings contain both ``{[condition?`` (missing ``]``) and
+    # ``{[condition] ?`` (a space before the question mark).  The compatibility
+    # node compares their control headers and machine atoms, but deliberately
+    # ignores visible prose so a Turkish translation may change naturally.
+    headers = tuple(match.group(0).casefold() for match in _LEGACY_CONDITIONAL_HEADER.finditer(text))
+    stripped = _LEGACY_CONDITIONAL_HEADER.sub(" ", text)
     ordinary = tuple(match.group(0).casefold() for match in _ORDINARY_TOKEN.finditer(stripped))
-    punctuation = tuple(char for char in stripped if char in "{}?:")
-    return ("legacy", headers, ordinary, punctuation, text.count("{"), text.count("}"))
+    # Question marks in a legacy branch are ordinary prose punctuation (for
+    # example an English dash may naturally become a Turkish question).  The
+    # conditional headers above retain the control ``?``; only braces and
+    # colons remain useful compatibility shape markers here.
+    punctuation = tuple(char for char in stripped if char in "{}:")
+    return (headers, ordinary, punctuation, text.count("{"), text.count("}"))
 
 
 def _format_signature(text: str) -> tuple | None:
@@ -125,13 +202,65 @@ def _format_signature(text: str) -> tuple | None:
     as its own tuple and compares only control syntax, not ordinary words.
     """
 
+    def legacy_conditional(start: int):
+        """Parse one historical conditional without weakening its siblings."""
+        # Some old entries omit the question mark entirely (``{[1=3]Text:}``)
+        # or put a nested opener between the header's closing bracket and the
+        # question (``{[1=2]{0=3]?Text:}``).  Do not search through that prose
+        # for a later question mark: it would make the visible English/Turkish
+        # text part of the header and produce a false format mismatch.
+        bracket_end = text.find("]", start + 2)
+        question = text.find("?", start + 2)
+        if bracket_end >= 0 and (question < 0 or bracket_end < question):
+            cursor = bracket_end + 1
+            while cursor < len(text) and text[cursor].isspace():
+                cursor += 1
+            if cursor < len(text) and text[cursor] == "?":
+                body_start = cursor + 1
+                header = text[start:body_start]
+            else:
+                # A malformed no-question header ends at its first closing
+                # bracket; nested conditionals are part of the body signature.
+                body_start = bracket_end + 1
+                header = text[start:body_start]
+        elif question >= 0:
+            body_start = question + 1
+            header = text[start:body_start]
+        else:
+            # It is still useful to make an unmatched opener visible to the
+            # comparison instead of falling back for the entire value.
+            return ("legacy-conditional", text[start:].casefold(), ()), len(text)
+        depth = 1
+        index = body_start
+        while index < len(text):
+            char = text[index]
+            if char == "\\":
+                index += 2
+                continue
+            if char == "{":
+                depth += 1
+            elif char == "}":
+                depth -= 1
+                if depth == 0:
+                    body = text[body_start:index]
+                    return (
+                        "legacy-conditional",
+                        header.casefold(),
+                        _legacy_body_signature(body),
+                    ), index + 1
+            index += 1
+        body = text[body_start:]
+        return (
+            "legacy-conditional-unbalanced",
+            header.casefold(),
+            _legacy_body_signature(body),
+        ), len(text)
+
     def segment(index: int, stops: set[str]):
         nodes: list[tuple] = []
         while index < len(text):
             if text.startswith("{[", index):
                 conditional, index = parse_conditional(index)
-                if conditional is None:
-                    return None, index, None
                 nodes.append(conditional)
                 continue
             char = text[index]
@@ -145,25 +274,33 @@ def _format_signature(text: str) -> tuple | None:
                 nodes.append(("atom", match.group(0).casefold()))
                 index = match.end()
                 continue
+            if char in "{}":
+                # A stray closing brace must not disappear into a permissive
+                # whole-string legacy fallback (the old code accepted one).
+                nodes.append(("brace", char))
             index += 1
         return tuple(nodes), index, None
 
     def parse_conditional(start: int):
-        header_end = text.find("]?", start + 2)
-        if header_end < 0:
-            return None, start
+        header_match = _NORMAL_CONDITIONAL_HEADER.match(text, start)
+        if header_match is None:
+            return legacy_conditional(start)
+        header_end = header_match.end() - 2
         first, separator, delimiter = segment(header_end + 2, {":", "}"})
         if first is None or delimiter != ":":
-            return None, start
+            return legacy_conditional(start)
         second, close, delimiter = segment(separator + 1, {"}"})
         if second is None or delimiter != "}":
-            return None, start
+            return legacy_conditional(start)
         header = text[start : header_end + 2].casefold()
         return ("conditional", header, first, second), close + 1
 
     signature, end, delimiter = segment(0, set())
     if signature is None or delimiter is not None or end != len(text):
-        return _legacy_format_signature(text)
+        # This path should only be reachable for an unexpected parser bug.  A
+        # conservative invalid marker is preferable to silently accepting a
+        # value with unrelated conditionals or extra braces.
+        return ("invalid-format", text.count("{"), text.count("}"))
     return signature
 
 
@@ -256,9 +393,10 @@ def _conditional_bounds(text: str, start: int) -> tuple[int, int, int] | None:
     """
     if not text.startswith("{[", start):
         return None
-    header_end = text.find("]?", start + 2)
-    if header_end < 0:
+    header_match = _NORMAL_CONDITIONAL_HEADER.match(text, start)
+    if header_match is None:
         return None
+    header_end = header_match.end() - 2
     index = header_end + 2
     depth = 1
     separator = -1
@@ -389,7 +527,8 @@ def resolve_changes(
     manual: dict,
     terms: tuple[dict, dict, dict],
     argos: Callable[[str], str] | None = None,
-    memory_sources: dict[str, str] | None = None,
+    memory_sources: dict | None = None,
+    source_metadata: dict | None = None,
 ) -> tuple[dict[str, str], dict[str, str]]:
     """Return proposals and their source.
 
@@ -402,14 +541,16 @@ def resolve_changes(
     origin: dict[str, str] = {}
     for record in changes:
         candidate = None
-        if record.key in manual: candidate, source = str(manual[record.key]), "manual"
+        if record.key in manual and manual_source_matches(record, source_metadata):
+            candidate, source = str(manual[record.key]), "manual"
         elif (
             record.key in translations
             and str(translations[record.key]).strip()
             and memory_source_matches(record, memory_sources)
         ):
             candidate, source = str(translations[record.key]), "memory"
-        elif record.key in term_keys: candidate, source = str(term_keys[record.key]), "glossary-key"
+        elif record.key in term_keys and glossary_key_source_matches(record, source_metadata):
+            candidate, source = str(term_keys[record.key]), "glossary-key"
         elif record.source in term_values: candidate, source = str(term_values[record.source]), "glossary-value"
         elif argos is not None:
             candidate, source = translate_preserving_tokens(record.source, argos), "argos"

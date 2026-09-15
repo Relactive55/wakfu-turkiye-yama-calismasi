@@ -10,7 +10,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -46,8 +48,55 @@ def _approved_baseline(game_version: str) -> tuple[dict[str, object], Path]:
     return state, baseline
 
 
-def _run(command: list[str]) -> None:
-    subprocess.run(command, cwd=PROJECT_ROOT, check=True)
+def _diagnostic_dir(output_dir: Path) -> Path:
+    configured = os.environ.get("WAKFU_RELEASE_DIAGNOSTIC_DIR")
+    return Path(configured) if configured else output_dir / "release-diagnostics"
+
+
+def _write_diagnostic_text(directory: Path, name: str, text: str) -> None:
+    directory.mkdir(parents=True, exist_ok=True)
+    (directory / name).write_text(text or "", encoding="utf-8")
+
+
+def _run(command: list[str], *, label: str, diagnostics: Path) -> subprocess.CompletedProcess[str]:
+    result = subprocess.run(command, cwd=PROJECT_ROOT, check=False, capture_output=True, text=True)
+    _write_diagnostic_text(diagnostics, f"{label}.stdout.txt", result.stdout)
+    _write_diagnostic_text(diagnostics, f"{label}.stderr.txt", result.stderr)
+    if result.returncode:
+        raise RuntimeError(
+            f"{label} failed with exit code {result.returncode}. Diagnostics: {diagnostics}"
+        )
+    return result
+
+
+def _preserve_audit_diagnostics(audit_dir: Path, patch: Path, diagnostics: Path) -> None:
+    diagnostics.mkdir(parents=True, exist_ok=True)
+    if audit_dir.is_dir():
+        destination = diagnostics / "audit"
+        if destination.exists():
+            shutil.rmtree(destination)
+        shutil.copytree(audit_dir, destination)
+    skipped = patch.with_suffix(".skipped.tsv")
+    if skipped.is_file():
+        shutil.copy2(skipped, diagnostics / "i18n.skipped.tsv")
+
+
+def _write_failure_metadata(diagnostics: Path, *, stage: str, error: Exception) -> None:
+    diagnostics.mkdir(parents=True, exist_ok=True)
+    (diagnostics / "release_failure.json").write_text(
+        json.dumps(
+            {
+                "status": "FAILED",
+                "stage": stage,
+                "error": str(error),
+                "diagnostics": str(diagnostics),
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
 
 
 def _audit_issue_count(summary_path: Path) -> int:
@@ -61,6 +110,9 @@ def _audit_issue_count(summary_path: Path) -> int:
 def build_approved_release(*, game_version: str, patch_version: str, output_dir: Path) -> dict[str, object]:
     state, baseline_path = _approved_baseline(game_version)
     output_dir.mkdir(parents=True, exist_ok=True)
+    diagnostics = _diagnostic_dir(output_dir)
+    if diagnostics.exists():
+        shutil.rmtree(diagnostics)
     with tempfile.TemporaryDirectory(prefix="wakfu-approved-release-") as temp:
         work = Path(temp)
         source = work / SOURCE_JAR_NAME
@@ -86,28 +138,44 @@ def build_approved_release(*, game_version: str, patch_version: str, output_dir:
         if diff(baseline, current_snapshot)["NEW"] or diff(baseline, current_snapshot)["MODIFIED"] or diff(baseline, current_snapshot)["REMOVED"]:
             raise RuntimeError("CDN source differs from the approved baseline; release stopped")
 
-        _run([
-            sys.executable,
-            str(PROJECT_ROOT / "Kaynak_Kodu" / "build_wakfu_jar.py"),
-            "--source-jar", str(source),
-            "--output-jar", str(patch),
-            "--project", str(PROJECT_ROOT / "Ceviri_Verileri" / "wakfu_tr_ceviri.json"),
-            "--terminology", str(PROJECT_ROOT / "Ceviri_Verileri" / "terim_duzeltmeleri.json"),
-            "--manual-repairs", str(PROJECT_ROOT / "Ceviri_Verileri" / "manual_repairs_v23.json"),
-        ])
-        _run([
-            sys.executable,
-            str(PROJECT_ROOT / "Kaynak_Kodu" / "wakfu_audit.py"),
-            "--source-jar", str(source),
-            "--project", str(PROJECT_ROOT / "Ceviri_Verileri" / "wakfu_tr_ceviri.json"),
-            "--terminology", str(PROJECT_ROOT / "Ceviri_Verileri" / "terim_duzeltmeleri.json"),
-            "--manual-repairs", str(PROJECT_ROOT / "Ceviri_Verileri" / "manual_repairs_v23.json"),
-            "--output-dir", str(audit_dir),
-            "--stage", "RELEASE",
-        ])
-        issue_count = _audit_issue_count(audit_dir / "Wakfu_Ceviri_Ozet.txt")
-        if issue_count:
-            raise RuntimeError(f"wakfu_audit reported {issue_count} critical issue(s)")
+        try:
+            _run([
+                sys.executable,
+                str(PROJECT_ROOT / "Kaynak_Kodu" / "build_wakfu_jar.py"),
+                "--source-jar", str(source),
+                "--output-jar", str(patch),
+                "--project", str(PROJECT_ROOT / "Ceviri_Verileri" / "wakfu_tr_ceviri.json"),
+                "--terminology", str(PROJECT_ROOT / "Ceviri_Verileri" / "terim_duzeltmeleri.json"),
+                "--manual-repairs", str(PROJECT_ROOT / "Ceviri_Verileri" / "manual_repairs_v23.json"),
+                "--source-metadata", str(PROJECT_ROOT / "Ceviri_Verileri" / "translation_memory_sources.json"),
+            ], label="build", diagnostics=diagnostics)
+        except Exception as error:
+            # The builder writes its skipped-row report next to the temporary
+            # patch even when it exits non-zero.  Preserve it with the other
+            # diagnostics so a failed run remains actionable instead of
+            # requiring a rerun just to discover which rows were rejected.
+            _preserve_audit_diagnostics(audit_dir, patch, diagnostics)
+            _write_failure_metadata(diagnostics, stage="build", error=error)
+            raise
+        try:
+            _run([
+                sys.executable,
+                str(PROJECT_ROOT / "Kaynak_Kodu" / "wakfu_audit.py"),
+                "--source-jar", str(source),
+                "--project", str(PROJECT_ROOT / "Ceviri_Verileri" / "wakfu_tr_ceviri.json"),
+                "--terminology", str(PROJECT_ROOT / "Ceviri_Verileri" / "terim_duzeltmeleri.json"),
+                "--manual-repairs", str(PROJECT_ROOT / "Ceviri_Verileri" / "manual_repairs_v23.json"),
+                "--source-metadata", str(PROJECT_ROOT / "Ceviri_Verileri" / "translation_memory_sources.json"),
+                "--output-dir", str(audit_dir),
+                "--stage", "RELEASE",
+            ], label="audit", diagnostics=diagnostics)
+            issue_count = _audit_issue_count(audit_dir / "Wakfu_Ceviri_Ozet.txt")
+            if issue_count:
+                raise RuntimeError(f"wakfu_audit reported {issue_count} critical issue(s)")
+        except Exception as error:
+            _preserve_audit_diagnostics(audit_dir, patch, diagnostics)
+            _write_failure_metadata(diagnostics, stage="audit", error=error)
+            raise
         # Re-read the lightweight CDN identity immediately before staging the
         # Release assets.  A WAKFU rollout during the build must not result in
         # an old source being tagged as current.
@@ -123,7 +191,10 @@ def build_approved_release(*, game_version: str, patch_version: str, output_dir:
             raise RuntimeError(final_gate["code"])
         manifest = build_release_assets(patch_jar=patch, source_jar=source, game_version=game_version, patch_version=patch_version, output_dir=output_dir)
         validation = validate_release(source_jar=source, patch_jar=output_dir / "i18n.jar", manifest_path=output_dir / "manifest.json", game_version=game_version, patch_version=patch_version, release_tag=f"tr-{patch_version}")
-        return {"status": "PASS", "mode": "stable", "game_version": game_version, "patch_version": patch_version, "audit_issues": issue_count, "manifest": manifest, "validation": validation["translation"]}
+        result = {"status": "PASS", "mode": "stable", "game_version": game_version, "patch_version": patch_version, "audit_issues": issue_count, "manifest": manifest, "validation": validation["translation"]}
+        if diagnostics.exists():
+            shutil.rmtree(diagnostics)
+        return result
 
 
 def main() -> None:

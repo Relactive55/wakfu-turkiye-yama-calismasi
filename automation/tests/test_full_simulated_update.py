@@ -185,6 +185,15 @@ def run_simulation(model_path: Path, model_lock: Path, output_root: Path) -> dic
     # residue (for example ``<b>Damage dealt</b>``).
     manual["sim.tag"] = "<b>Hasar verildi</b>"
     terms[1]["Damage"] = "Hasar"
+    source_metadata = {
+        "schema": 3,
+        "memory": memory_sources,
+        "manual": {
+            "sim.manual": [source_fingerprint("Welcome hero, changed")],
+            "sim.tag": [source_fingerprint("<b>Damage dealt</b>")],
+        },
+        "glossary_keys": {},
+    }
 
     translator = install_locked_model(model_path, model_lock)
     proposals, origins = resolve_changes(
@@ -194,6 +203,7 @@ def run_simulation(model_path: Path, model_lock: Path, output_root: Path) -> dic
         terms=terms,
         argos=translator,
         memory_sources=memory_sources,
+        source_metadata=source_metadata,
     )
     validate_proposals(
         diff=delta,
