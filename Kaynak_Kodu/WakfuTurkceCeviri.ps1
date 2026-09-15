@@ -404,6 +404,7 @@ foreach($requiredDir in @($DataDir,$SettingsDir,$BuildDir,$ReportsDir,$GameAsset
 $ProjectFile = Join-Path $DataDir 'wakfu_tr_ceviri.json'
 $TerminologyFile = Join-Path $DataDir 'terim_duzeltmeleri.json'
 $ManualRepairsFile = Join-Path $DataDir 'manual_repairs_v23.json'
+$SourceMetadataFile = Join-Path $DataDir 'translation_memory_sources.json'
 $OutputJar = Join-Path $BuildDir 'i18n.jar'
 $PackagedBackupDir = Join-Path $GameAssetsDir 'Orijinal_Yedek'
 $BackupDir = Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'WakfuTurkceYama\Yedekler\Resmi_Oyun_Dosyalari'
@@ -481,9 +482,12 @@ $script:Entries = @()
 $script:Visible = @()
 $script:Translations = New-Object 'Collections.Generic.Dictionary[string,string]' ([StringComparer]::Ordinal)
 $script:TermKeys = New-Object 'Collections.Generic.Dictionary[string,string]' ([StringComparer]::Ordinal)
+$script:BaseTermKeys = New-Object 'Collections.Generic.Dictionary[string,string]' ([StringComparer]::Ordinal)
 $script:TermValues = New-Object 'Collections.Generic.Dictionary[string,string]' ([StringComparer]::Ordinal)
 $script:TermPhrases = New-Object 'Collections.Generic.Dictionary[string,string]' ([StringComparer]::Ordinal)
 $script:ManualRepairs = New-Object 'Collections.Generic.Dictionary[string,string]' ([StringComparer]::Ordinal)
+$script:SourceMetadata = @{}
+$script:SourcePackageSha1 = ''
 $script:SortedTermPhraseKeys = @()
 $script:SelectedKey = $null
 $script:LoadedTurkishValue = ''
@@ -879,7 +883,10 @@ function Test-IsProtectedNameKey([string]$key){
         $source=[string]$script:EntryEnglish[$key]
         if($source-match'^\s*\[se\](?:\s|$)' -or $source-match'^\s*-?\s*\[#\d+\]\s+(?:AP|WP|MP)(?:\s+\(.+\))?\s*$'){return $true}
     }
-    if($script:TermKeys -and $script:TermKeys.ContainsKey($key)){return $false}
+    if($script:BaseTermKeys -and $script:BaseTermKeys.ContainsKey($key)){return $false}
+    if($script:ManualRepairs -and $script:ManualRepairs.ContainsKey($key) -and
+       $script:EntryEnglish -and $script:EntryEnglish.ContainsKey($key) -and
+       (Test-SourceMetadataMatch 'manual' $key ([string]$script:EntryEnglish[$key]) $script:SourcePackageSha1)){return $false}
     if($key-in@(
         'content.15.2175',
         'content.15.2603',
@@ -1009,7 +1016,10 @@ function Write-TranslationLogSnapshot([string]$stage,[string]$details='',[bool]$
         foreach($entry in $script:Entries){
             $key=[string]$entry.Key;$source=[string]$entry.English
             $safeSource=($source-replace"`r",'\r'-replace"`n",'\n')
-            $current=if($script:TermKeys.ContainsKey($key)-and-not$script:ManualRepairs.ContainsKey($key)){[string]$script:TermKeys[$key]}elseif((Test-IsWorldTermOverrideKey $key)-and$script:TermValues.ContainsKey($source)){[string]$script:TermValues[$source]}elseif($script:ManualRepairs.ContainsKey($key)){[string]$script:ManualRepairs[$key]}elseif($script:TermKeys.ContainsKey($key)){[string]$script:TermKeys[$key]}elseif($script:TermValues.ContainsKey($source)){[string]$script:TermValues[$source]}elseif($script:Translations.ContainsKey($key)){[string]$script:Translations[$key]}else{''}
+            $manualAllowed=$script:ManualRepairs.ContainsKey($key)-and(Test-SourceMetadataMatch 'manual' $key $source $script:SourcePackageSha1)
+            $termKeyAllowed=$script:BaseTermKeys.ContainsKey($key)-and(Test-SourceMetadataMatch 'glossary_keys' $key $source $script:SourcePackageSha1)
+            $memoryAllowed=$script:Translations.ContainsKey($key)-and(Test-SourceMetadataMatch 'memory' $key $source $script:SourcePackageSha1)
+            $current=if($manualAllowed){[string]$script:ManualRepairs[$key]}elseif((Test-IsWorldTermOverrideKey $key)-and$script:TermValues.ContainsKey($source)){[string]$script:TermValues[$source]}elseif($memoryAllowed){[string]$script:Translations[$key]}elseif($termKeyAllowed){[string]$script:BaseTermKeys[$key]}elseif($script:TermValues.ContainsKey($source)){[string]$script:TermValues[$source]}else{''}
             $safeCurrent=($current-replace"`r",'\r'-replace"`n",'\n')
             if(Test-IsProtectedNameKey $key){$namesExcluded++;if($includeAllRemaining -or $examples.Count-lt20){$examples.Add("$key | NEDEN=Zorunlu Wakfu ad koruması | EN=$safeSource | TR=$safeCurrent")};continue}
             if([string]::IsNullOrWhiteSpace($current)){$missing++;if($includeAllRemaining -or $examples.Count-lt20){$examples.Add("$key | NEDEN=Boş/sonuç yok | EN=$safeSource | TR=$safeCurrent")};continue}
@@ -1405,6 +1415,94 @@ function Load-Project {
     $script:ProjectDirty=$false
 }
 
+function Get-SourceTextFingerprint([string]$source) {
+    $sha=[Security.Cryptography.SHA256]::Create()
+    try {
+        $bytes=[Text.Encoding]::UTF8.GetBytes([string]$source)
+        return ([BitConverter]::ToString($sha.ComputeHash($bytes))).Replace('-','').ToLowerInvariant()
+    } finally { $sha.Dispose() }
+}
+
+function Get-SourcePackageFingerprint([string]$path) {
+    if([string]::IsNullOrWhiteSpace($path)-or-not(Test-Path -LiteralPath $path)){return ''}
+    try { return ([string](Get-FileHash -LiteralPath $path -Algorithm SHA1).Hash).ToLowerInvariant() } catch { return '' }
+}
+
+function Load-SourceMetadata {
+    $script:SourceMetadata=@{}
+    $script:SourcePackageSha1=Get-SourcePackageFingerprint $SourceJar
+    if(-not(Test-Path -LiteralPath $SourceMetadataFile)){return}
+    try{
+        $serializer=New-Object Web.Script.Serialization.JavaScriptSerializer
+        $serializer.MaxJsonLength=[int]::MaxValue
+        $raw=$serializer.DeserializeObject((Get-Content -LiteralPath $SourceMetadataFile -Raw -Encoding UTF8))
+        if($raw -is [Collections.IDictionary]){foreach($key in $raw.Keys){$script:SourceMetadata[[string]$key]=$raw[$key]}}
+    }catch{Write-AppLog "Kaynak onay metadata'sı yüklenemedi: $($_.Exception.Message)" 'KAYNAK-METADATA-HATA'}
+}
+
+function Get-SourceMetadataHashes([string]$namespace,[string]$key) {
+    if($null-eq$script:SourceMetadata -or-not($script:SourceMetadata -is [Collections.IDictionary])){return @()}
+    $bucket=$null
+    if($script:SourceMetadata.Contains($namespace)){$bucket=$script:SourceMetadata[$namespace]}
+    elseif($namespace-eq'memory' -and -not($script:SourceMetadata.Contains('memory') -or $script:SourceMetadata.Contains('manual') -or $script:SourceMetadata.Contains('glossary_keys') -or $script:SourceMetadata.Contains('invalidated'))){$bucket=$script:SourceMetadata}
+    if($null-eq$bucket-or-not($bucket -is [Collections.IDictionary])-or-not$bucket.Contains($key)){return @()}
+    $raw=$bucket[$key]
+    if($raw -is [string]){return @([string]$raw)}
+    if($raw -is [Collections.IDictionary]){if($raw.Contains('sources')){$raw=$raw['sources']}else{return @()}}
+    if($raw -is [Collections.IEnumerable]){return @($raw|ForEach-Object{[string]$_})}
+    return @()
+}
+
+function Test-SourceMetadataMatch([string]$namespace,[string]$key,[string]$source,[string]$packageSha1='') {
+    $expected=Get-SourceTextFingerprint $source
+    foreach($hash in @(Get-SourceMetadataHashes $namespace $key)){
+        if([string]::Equals([string]$hash,$expected,[StringComparison]::OrdinalIgnoreCase)){return $true}
+    }
+    # Schema-3 migration permits a legacy approval only when the complete
+    # English package is exactly the approved package and this key was not
+    # explicitly invalidated.  A changed package therefore never revives an
+    # old manual/key-only value.
+    if([string]::IsNullOrWhiteSpace($packageSha1)-or-not($script:SourceMetadata -is [Collections.IDictionary])){return $false}
+    if(-not$script:SourceMetadata.Contains('source_sha1')-or-not([string]::Equals([string]$script:SourceMetadata['source_sha1'],$packageSha1,[StringComparison]::OrdinalIgnoreCase))){return $false}
+    $invalidated=$script:SourceMetadata['invalidated']
+    if($invalidated -is [Collections.IDictionary]-and$invalidated.Contains($namespace)){
+        $keys=$invalidated[$namespace]
+        if($keys -is [Collections.IEnumerable] -and @($keys|ForEach-Object{[string]$_})-contains$key){return $false}
+    }
+    return $true
+}
+
+function Save-SourceMetadata {
+    if($null-eq$script:SourceMetadata -or-not($script:SourceMetadata -is [Collections.IDictionary])){return}
+    try{
+        $serializer=New-Object Web.Script.Serialization.JavaScriptSerializer
+        $serializer.MaxJsonLength=[int]::MaxValue
+        $tempFile=$SourceMetadataFile+'.tmp'
+        [IO.File]::WriteAllText($tempFile,$serializer.Serialize($script:SourceMetadata),(New-Object Text.UTF8Encoding($true)))
+        if(Test-Path -LiteralPath $SourceMetadataFile){
+            $replaceBackup=$SourceMetadataFile+'.replace.bak'
+            if(Test-Path -LiteralPath $replaceBackup){[IO.File]::Delete($replaceBackup)}
+            [IO.File]::Replace($tempFile,$SourceMetadataFile,$replaceBackup,$true)
+            if(Test-Path -LiteralPath $replaceBackup){[IO.File]::Delete($replaceBackup)}
+        }else{[IO.File]::Move($tempFile,$SourceMetadataFile)}
+    }catch{Write-AppLog "Kaynak onay metadata'sı kaydedilemedi: $($_.Exception.Message)" 'KAYNAK-METADATA-HATA'}
+}
+
+function Set-SourceMetadataApproval([string]$namespace,[string]$key,[string]$source,[bool]$enabled=$true) {
+    if($namespace-notin@('memory','manual','glossary_keys')-or[string]::IsNullOrWhiteSpace($key)){return}
+    if($null-eq$script:SourceMetadata-or-not($script:SourceMetadata -is [Collections.IDictionary])){$script:SourceMetadata=@{}}
+    $bucket=$script:SourceMetadata[$namespace]
+    if($null-eq$bucket-or-not($bucket -is [Collections.IDictionary])){$bucket=[ordered]@{};$script:SourceMetadata[$namespace]=$bucket}
+    if($enabled){$bucket[$key]=@((Get-SourceTextFingerprint $source))}
+    elseif($bucket.Contains($key)){[void]$bucket.Remove($key)}
+    $invalidated=$script:SourceMetadata['invalidated']
+    if($invalidated -is [Collections.IDictionary]-and$invalidated.Contains($namespace)){
+        $remaining=@($invalidated[$namespace]|ForEach-Object{[string]$_}|Where-Object{$_-cne$key})
+        $invalidated[$namespace]=$remaining
+    }
+    Save-SourceMetadata
+}
+
 function Update-TermPhraseMatcher {
     $script:SortedTermPhraseKeys=@($script:TermPhrases.Keys|Sort-Object Length -Descending)
     if($script:SortedTermPhraseKeys.Count-gt0){
@@ -1427,6 +1525,7 @@ function Apply-TermPhrases([string]$value) {
 
 function Load-Terminology {
     $script:TermKeys = New-Object 'Collections.Generic.Dictionary[string,string]' ([StringComparer]::Ordinal)
+    $script:BaseTermKeys = New-Object 'Collections.Generic.Dictionary[string,string]' ([StringComparer]::Ordinal)
     $script:TermValues = New-Object 'Collections.Generic.Dictionary[string,string]' ([StringComparer]::Ordinal)
     $script:TermPhrases = New-Object 'Collections.Generic.Dictionary[string,string]' ([StringComparer]::Ordinal)
     if (-not (Test-Path -LiteralPath $TerminologyFile)) { return }
@@ -1466,6 +1565,9 @@ function Load-Terminology {
     $script:TermKeys['breed.role.name.8']='Destek'
     $script:TermValues['Booster']='Güçlendirici'
     $script:TermValues['Boosters']='Güçlendiriciler'
+    # Manual repairs are mirrored into TermKeys for the editor/search index,
+    # but they must remain distinguishable from real glossary-key approvals.
+    foreach($key in $script:TermKeys.Keys){$script:BaseTermKeys[$key]=$script:TermKeys[$key]}
     # İnsan tarafından denetlenmiş düzeltmeler her yeniden çeviri ve oyun
     # güncellemesinde en yüksek öncelikle korunur.
     $script:ManualRepairs = New-Object 'Collections.Generic.Dictionary[string,string]' ([StringComparer]::Ordinal)
@@ -1927,9 +2029,15 @@ function Save-Current {
             if($v){
                 $script:ManualRepairs[$script:SelectedKey]=$v
                 $script:TermKeys[$script:SelectedKey]=$v
+                $manualSource=[string]$english.Text
+                Set-SourceMetadataApproval 'manual' ([string]$script:SelectedKey) $manualSource $true
+                Set-SourceMetadataApproval 'memory' ([string]$script:SelectedKey) $manualSource $true
             }else{
                 if($script:ManualRepairs.ContainsKey($script:SelectedKey)){[void]$script:ManualRepairs.Remove($script:SelectedKey)}
                 if($script:TermKeys.ContainsKey($script:SelectedKey)){[void]$script:TermKeys.Remove($script:SelectedKey)}
+                $memorySource=if($script:EntryEnglish.ContainsKey($script:SelectedKey)){[string]$script:EntryEnglish[$script:SelectedKey]}else{[string]$english.Text}
+                Set-SourceMetadataApproval 'manual' ([string]$script:SelectedKey) $memorySource $false
+                Set-SourceMetadataApproval 'memory' ([string]$script:SelectedKey) $memorySource $false
             }
             $searchValue=$v
             if(-not$searchValue -and $script:EntryEnglish.ContainsKey($script:SelectedKey)){
@@ -1957,7 +2065,7 @@ function Test-IsUntranslated($entry) {
     return ($analysis.Status-in@('EKSIK','BICIM_HATASI','INGILIZCE_KALDI'))
 }
 
-function Rewrite-PropertyEntry($zip, [string]$entryName, [hashtable]$translations) {
+function Rewrite-PropertyEntry($zip, [string]$entryName, [hashtable]$translations, [string]$packageSha1='') {
     $entry = $zip.GetEntry($entryName)
     if (-not $entry) { return }
     $reader = New-Object IO.StreamReader($entry.Open(), [Text.Encoding]::UTF8, $true)
@@ -1974,12 +2082,14 @@ function Rewrite-PropertyEntry($zip, [string]$entryName, [hashtable]$translation
         $symbolHeavyGibberish=($sourceValue.Length-ge12-and$letterCount-le6-and$sourceValue-notmatch'[A-Za-z]{2,}')
         if($symbolHeavyGibberish){continue}
         $candidate=$null;$applyPhraseRules=$true
-        if ($script:TermKeys.ContainsKey($key)-and-not$script:ManualRepairs.ContainsKey($key)) { $candidate=[string]$script:TermKeys[$key];$applyPhraseRules=$false }
+        $manualAllowed=$script:ManualRepairs.ContainsKey($key)-and(Test-SourceMetadataMatch 'manual' $key $sourceValue $packageSha1)
+        $termKeyAllowed=$script:BaseTermKeys.ContainsKey($key)-and(Test-SourceMetadataMatch 'glossary_keys' $key $sourceValue $packageSha1)
+        $memoryAllowed=$translations.ContainsKey($key)-and(Test-SourceMetadataMatch 'memory' $key $sourceValue $packageSha1)
+        if ($manualAllowed) { $candidate=[string]$script:ManualRepairs[$key];$applyPhraseRules=$false }
         elseif ((Test-IsWorldTermOverrideKey $key)-and$script:TermValues.ContainsKey($sourceValue)) { $candidate=[string]$script:TermValues[$sourceValue];$applyPhraseRules=$false }
-        elseif ($script:ManualRepairs.ContainsKey($key)) { $candidate=[string]$script:ManualRepairs[$key];$applyPhraseRules=$false }
-        elseif ($script:TermKeys.ContainsKey($key)) { $candidate=[string]$script:TermKeys[$key];$applyPhraseRules=$false }
+        elseif ($memoryAllowed -and -not [string]::IsNullOrWhiteSpace($translations[$key])) { $candidate=[string]$translations[$key] }
+        elseif ($termKeyAllowed) { $candidate=[string]$script:BaseTermKeys[$key];$applyPhraseRules=$false }
         elseif ($script:TermValues.ContainsKey($sourceValue)) { $candidate=[string]$script:TermValues[$sourceValue];$applyPhraseRules=$false }
-        elseif ($translations.ContainsKey($key) -and -not [string]::IsNullOrWhiteSpace($translations[$key])) { $candidate=[string]$translations[$key] }
         if (-not [string]::IsNullOrWhiteSpace($candidate)) {
             if($applyPhraseRules){$candidate=Apply-TermPhrases $candidate}
             $candidate=Align-PropertyMarkup $sourceValue $candidate
@@ -2000,7 +2110,9 @@ function Build-Jar([switch]$Silent) {
     $buildUpdates=@(Sync-GameUpdates)
     if($buildUpdates.Count-gt0){$script:BuildDirty=$true}
     $cache=Read-BuildCache
-    $i18nFingerprint=Get-TextFingerprint ('i18n-v5|'+$AppVersion+'|'+(Get-FileFingerprint $SourceJar)+'|'+(Get-FileFingerprint $ProjectFile)+'|'+(Get-FileFingerprint $TerminologyFile)+'|'+(Get-FileFingerprint $ManualRepairsFile)+'|'+(Get-FileFingerprint $JarBuilder)+'|'+(Get-FileFingerprint $AuditWorker))
+    $sourcePackageSha1=Get-SourcePackageFingerprint $SourceJar
+    $script:SourcePackageSha1=$sourcePackageSha1
+    $i18nFingerprint=Get-TextFingerprint ('i18n-v6|'+$AppVersion+'|'+(Get-FileFingerprint $SourceJar)+'|'+(Get-FileFingerprint $ProjectFile)+'|'+(Get-FileFingerprint $TerminologyFile)+'|'+(Get-FileFingerprint $ManualRepairsFile)+'|'+(Get-FileFingerprint $SourceMetadataFile)+'|'+(Get-FileFingerprint $JarBuilder)+'|'+(Get-FileFingerprint $AuditWorker))
     $fontParts=New-Object Collections.Generic.List[string]
     foreach($font in Get-ChildItem -LiteralPath $FontPatchDir -Filter '*.ttf' -File -ErrorAction SilentlyContinue|Sort-Object Name){[void]$fontParts.Add($font.Name+':'+(Get-FileFingerprint $font.FullName))}
     $guiSourceForFingerprint=if(Test-Path -LiteralPath $CurrentGuiJar){$CurrentGuiJar}else{$OriginalGuiJar}
@@ -2025,7 +2137,7 @@ function Build-Jar([switch]$Silent) {
             if($pythonCommand -and $pythonCommand.Source -notmatch '(?i)\\WindowsApps\\python(?:3)?\.exe$' -and (Test-Path -LiteralPath $pythonCommand.Source)){$builderPython=$pythonCommand.Source}
         }
         if($builderPython-and(Test-Path -LiteralPath $JarBuilder)-and(Test-Path -LiteralPath $ManualRepairsFile)){
-            $result=@(& $builderPython $JarBuilder '--source-jar' $SourceJar '--output-jar' $OutputJar '--project' $ProjectFile '--terminology' $TerminologyFile '--manual-repairs' $ManualRepairsFile 2>&1)
+            $result=@(& $builderPython $JarBuilder '--source-jar' $SourceJar '--output-jar' $OutputJar '--project' $ProjectFile '--terminology' $TerminologyFile '--manual-repairs' $ManualRepairsFile '--source-metadata' $SourceMetadataFile 2>&1)
             if($LASTEXITCODE-ne0-or-not(Test-Path -LiteralPath $OutputJar)){throw ($result-join"`n")}
             $resultText=$result-join"`n"
             if($resultText-match'SKIPPED=(\d+)'){$script:BuildSkipped=[int]$Matches[1]}
@@ -2034,8 +2146,8 @@ function Build-Jar([switch]$Silent) {
             Copy-Item -LiteralPath $SourceJar -Destination $OutputJar -Force
             $zip = [IO.Compression.ZipFile]::Open($OutputJar,[IO.Compression.ZipArchiveMode]::Update)
             try {
-                Rewrite-PropertyEntry $zip 'texts_en.properties' $script:Translations
-                Rewrite-PropertyEntry $zip 'texts_en_cleaned.properties' $script:Translations
+                Rewrite-PropertyEntry $zip 'texts_en.properties' $script:Translations $sourcePackageSha1
+                Rewrite-PropertyEntry $zip 'texts_en_cleaned.properties' $script:Translations $sourcePackageSha1
             } finally { $zip.Dispose() }
         }
     }
@@ -2378,13 +2490,12 @@ function Test-TranslationCompleteness([string]$source,[string]$translated) {
 
 function Get-TranslationProvider([string]$key,[string]$source){
     if(Test-IsForcedEnglishNameKey $key){return 'ORIJINAL_WAKFU_ADI'}
-    if($script:TermKeys.ContainsKey($key)-and-not$script:ManualRepairs.ContainsKey($key)){return 'TERIM_ANAHTARI'}
     if(Test-IsProtectedNameKey $key){return 'ORIJINAL_WAKFU_ADI'}
     if((Test-IsWorldTermOverrideKey $key)-and$script:TermValues.ContainsKey($source)){return 'TERIM_SOZLUGU'}
-    if($script:ManualRepairs.ContainsKey($key)){return 'ELLE_DOGRULANMIS_DUZELTME'}
-    if($script:TermKeys.ContainsKey($key)){return 'TERIM_ANAHTARI'}
+    if($script:ManualRepairs.ContainsKey($key)-and(Test-SourceMetadataMatch 'manual' $key $source $script:SourcePackageSha1)){return 'ELLE_DOGRULANMIS_DUZELTME'}
+    if($script:BaseTermKeys.ContainsKey($key)-and(Test-SourceMetadataMatch 'glossary_keys' $key $source $script:SourcePackageSha1)){return 'TERIM_ANAHTARI'}
     if($script:TermValues.ContainsKey($source)){return 'TERIM_SOZLUGU'}
-    if($script:Translations.ContainsKey($key)){return 'CEVIRI_BELLEGI'}
+    if($script:Translations.ContainsKey($key)-and(Test-SourceMetadataMatch 'memory' $key $source $script:SourcePackageSha1)){return 'CEVIRI_BELLEGI'}
     return 'YOK'
 }
 
@@ -2455,7 +2566,7 @@ function Convert-ToTsvField([string]$value){
 function Write-DiagnosticBundle([string]$stage){
     if((Test-Path -LiteralPath $AuditPython)-and(Test-Path -LiteralPath $AuditWorker)){
         try{
-            $auditArgs=@('--source-jar',$SourceJar,'--project',$ProjectFile,'--terminology',$TerminologyFile,'--live-log',$LiveTsv,'--output-dir',$LogDir,'--stage',$stage)
+            $auditArgs=@('--source-jar',$SourceJar,'--project',$ProjectFile,'--terminology',$TerminologyFile,'--manual-repairs',$ManualRepairsFile,'--source-metadata',$SourceMetadataFile,'--live-log',$LiveTsv,'--output-dir',$LogDir,'--stage',$stage)
             $auditResult=@(& $AuditPython $AuditWorker @auditArgs 2>&1)
             if($LASTEXITCODE-ne0){throw ($auditResult-join[Environment]::NewLine)}
             $auditLine=[string]($auditResult|Where-Object{[string]$_-like'AUDIT|*'}|Select-Object -Last 1)
@@ -2683,12 +2794,14 @@ function Get-EntryTranslation($entry) {
     if(Test-IsProtectedNameKey $key){return $source}
     $value=''
     $applyPhraseRules=$true
-    if($script:TermKeys.ContainsKey($key)-and-not$script:ManualRepairs.ContainsKey($key)){$value=[string]$script:TermKeys[$key];$applyPhraseRules=$false}
+    $manualAllowed=$script:ManualRepairs.ContainsKey($key)-and(Test-SourceMetadataMatch 'manual' $key $source $script:SourcePackageSha1)
+    $termKeyAllowed=$script:BaseTermKeys.ContainsKey($key)-and(Test-SourceMetadataMatch 'glossary_keys' $key $source $script:SourcePackageSha1)
+    $memoryAllowed=$script:Translations.ContainsKey($key)-and(Test-SourceMetadataMatch 'memory' $key $source $script:SourcePackageSha1)
+    if($manualAllowed){$value=[string]$script:ManualRepairs[$key];$applyPhraseRules=$false}
     elseif((Test-IsWorldTermOverrideKey $key)-and$script:TermValues.ContainsKey($source)){$value=[string]$script:TermValues[$source];$applyPhraseRules=$false}
-    elseif($script:ManualRepairs.ContainsKey($key)){$value=[string]$script:ManualRepairs[$key];$applyPhraseRules=$false}
-    elseif($script:TermKeys.ContainsKey($key)){$value=[string]$script:TermKeys[$key];$applyPhraseRules=$false}
+    elseif($memoryAllowed){$value=[string]$script:Translations[$key]}
+    elseif($termKeyAllowed){$value=[string]$script:BaseTermKeys[$key];$applyPhraseRules=$false}
     elseif($script:TermValues.ContainsKey($source)){$value=[string]$script:TermValues[$source];$applyPhraseRules=$false}
-    elseif($script:Translations.ContainsKey($key)){$value=[string]$script:Translations[$key]}
     if($applyPhraseRules){$value=Apply-TermPhrases $value}
     return $value
 }
@@ -3114,6 +3227,7 @@ $form.Add_FormClosing({
 try {
     $detectedUpdates=if($AuditOnly -or $BuildOnly){@()}else{@(Sync-GameUpdates)}
     $script:Entries = Read-PropertiesFromJar
+    Load-SourceMetadata
     $script:EntryEnglish=New-Object 'Collections.Generic.Dictionary[string,string]' ([StringComparer]::Ordinal)
     foreach($entry in $script:Entries){$script:EntryEnglish[[string]$entry.Key]=[string]$entry.English}
     $script:SkillTitleValues=New-Object 'Collections.Generic.HashSet[string]' ([StringComparer]::Ordinal)

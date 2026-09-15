@@ -1,5 +1,6 @@
 import argparse
 import json
+import hashlib
 import os
 import re
 import tempfile
@@ -21,6 +22,52 @@ from wakfu_audit import (
 def load_json(path):
     with open(path, "r", encoding="utf-8-sig") as handle:
         return json.load(handle)
+
+
+SOURCE_HASH_RE = re.compile(r"^[0-9a-fA-F]{64}$")
+
+
+def _source_metadata_bucket(metadata, namespace):
+    if not isinstance(metadata, dict):
+        return {}
+    bucket = metadata.get(namespace)
+    if isinstance(bucket, dict):
+        return bucket
+    if namespace == "memory" and not any(name in metadata for name in ("memory", "manual", "glossary_keys", "invalidated")):
+        return metadata
+    return {}
+
+
+def source_metadata_matches(metadata, namespace, key, source, package_sha1=None):
+    raw = _source_metadata_bucket(metadata, namespace).get(key)
+    if isinstance(raw, str):
+        values = [raw]
+    elif isinstance(raw, (list, tuple, set)):
+        values = list(raw)
+    elif isinstance(raw, dict):
+        values = raw.get("sources", [])
+        if isinstance(values, str):
+            values = [values]
+    else:
+        values = []
+    expected = hashlib.sha256(str(source).encode("utf-8")).hexdigest()
+    if any(isinstance(value, str) and SOURCE_HASH_RE.fullmatch(value) and value.casefold() == expected for value in values):
+        return True
+    if not isinstance(metadata, dict) or not isinstance(package_sha1, str):
+        return False
+    if str(metadata.get("source_sha1", "")).casefold() != package_sha1.casefold():
+        return False
+    invalidated = metadata.get("invalidated", {})
+    keys = invalidated.get(namespace, []) if isinstance(invalidated, dict) else []
+    return isinstance(keys, list) and key not in keys
+
+
+def source_package_sha1(path):
+    digest = hashlib.sha1()
+    with open(path, "rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def align_markup(source, candidate):
@@ -67,7 +114,18 @@ def apply_phrase_rules(value, phrases):
     return value
 
 
-def rewrite_properties(data, translations, term_keys, term_values, phrases, manual, protected_values, skipped_rows):
+def rewrite_properties(
+    data,
+    translations,
+    term_keys,
+    term_values,
+    phrases,
+    manual,
+    protected_values,
+    skipped_rows,
+    source_metadata=None,
+    source_sha1=None,
+):
     text = data.decode("utf-8-sig")
     newline = "\r\n" if "\r\n" in text else "\n"
     lines = text.splitlines()
@@ -108,23 +166,32 @@ def rewrite_properties(data, translations, term_keys, term_values, phrases, manu
         # metinleriyle tekrarlandığı durumlarda anahtar bazlı belleğin yanlış
         # kopyayı ezmesini önler.  Resolve it before consulting key memory so
         # a stale key-based translation cannot win over an exact source term.
+        manual_allowed = key in manual and source_metadata_matches(
+            source_metadata, "manual", key, source, source_sha1
+        )
+        memory_allowed = key in translations and source_metadata_matches(
+            source_metadata, "memory", key, source, source_sha1
+        )
+        term_key_allowed = key in term_keys and source_metadata_matches(
+            source_metadata, "glossary_keys", key, source, source_sha1
+        )
         source_term_forced = (
             source in term_values
             and key.startswith(VISIBLE_WORLD_LABEL_PREFIXES)
         )
         allow_intrinsic_override = (
-            key in manual
-            or key in term_keys
+            manual_allowed
+            or term_key_allowed
             or source_term_forced
             or is_translatable_inventory_name(key, source)
             or (
                 key in MANUAL_PROTECTED_TRANSLATION_KEYS
-                and (key in manual or key in term_keys or key in translations)
+                and (manual_allowed or term_key_allowed or memory_allowed)
             )
         )
         allow_value_override = (
-            key in manual
-            or key in term_keys
+            manual_allowed
+            or term_key_allowed
             or source_term_forced
             or is_translatable_inventory_name(key, source)
         )
@@ -139,15 +206,15 @@ def rewrite_properties(data, translations, term_keys, term_values, phrases, manu
 
         candidate = None
         apply_phrases = True
-        if key in manual:
+        if manual_allowed:
             candidate = str(manual[key])
             apply_phrases = False
         elif source_term_forced:
             candidate = str(term_values[source])
             apply_phrases = False
-        elif key in translations and str(translations[key]).strip():
+        elif memory_allowed and str(translations[key]).strip():
             candidate = str(translations[key])
-        elif key in term_keys:
+        elif term_key_allowed:
             candidate = str(term_keys[key])
             apply_phrases = False
         elif source in term_values:
@@ -155,6 +222,9 @@ def rewrite_properties(data, translations, term_keys, term_values, phrases, manu
             apply_phrases = False
 
         if candidate is None:
+            if key in manual or key in translations or key in term_keys:
+                skipped_rows.setdefault(key, (source, "STALE_SOURCE_METADATA"))
+                skipped += 1
             output.append(line)
             continue
         if apply_phrases:
@@ -179,6 +249,10 @@ def main():
     parser.add_argument("--project", required=True)
     parser.add_argument("--terminology", required=True)
     parser.add_argument("--manual-repairs", "--manual", dest="manual_repairs", required=True)
+    parser.add_argument(
+        "--source-metadata",
+        help="Source-bound approval sidecar (defaults beside the project translation file)",
+    )
     args = parser.parse_args()
 
     source = Path(args.source_jar)
@@ -186,6 +260,9 @@ def main():
     translations = load_json(args.project)
     terminology = load_json(args.terminology)
     manual = load_json(args.manual_repairs)
+    metadata_path = Path(args.source_metadata) if args.source_metadata else Path(args.project).with_name("translation_memory_sources.json")
+    source_metadata = load_json(metadata_path) if metadata_path.is_file() else {}
+    source_sha1 = source_package_sha1(source)
     term_keys = {str(k): str(v) for k, v in terminology.get("keys", {}).items()}
     term_values = {str(k): str(v) for k, v in terminology.get("values", {}).items()}
     phrases = sorted(
@@ -216,7 +293,16 @@ def main():
                 data = src.read(info.filename)
                 if info.filename in {"texts_en.properties", "texts_en_cleaned.properties"}:
                     data, translated, protected, skipped = rewrite_properties(
-                        data, translations, term_keys, term_values, phrases, manual, protected_values, skipped_rows
+                        data,
+                        translations,
+                        term_keys,
+                        term_values,
+                        phrases,
+                        manual,
+                        protected_values,
+                        skipped_rows,
+                        source_metadata,
+                        source_sha1,
                     )
                     totals[0] += translated
                     totals[1] += protected

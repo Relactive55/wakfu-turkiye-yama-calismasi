@@ -186,6 +186,7 @@ class PipelineSimulation(unittest.TestCase):
             manual={"content.75.7401": "Dinle [#breedName]"},
             terms=({}, {}, {}),
             argos=None,
+            source_metadata={"manual": {"content.75.7401": [source_fingerprint("hear ye [#breedname]")]}},
         )
         self.assertEqual(proposals[record.identity], "Dinle [#breedName]")
         self.assertEqual(origins[record.identity], "manual")
@@ -216,6 +217,81 @@ class PipelineSimulation(unittest.TestCase):
         moved = "Sonuç {[condition]?value [#2]:fallback [#1]}"
         self.assertFalse(format_ok(source, moved))
         self.assertFalse(format_ok("{[=1]?[#1]:[#2]}", "{[=1]?[#1][#2]:}"))
+        # A legacy one-branch conditional must not send a later, well-formed
+        # conditional through the permissive compatibility path.
+        mixed_source = "{[=0]?} {[=1]?[#1]:[#2]}"
+        mixed_target = "{[=0]?} {[=1]?[#1][#2]:}"
+        self.assertFalse(format_ok(mixed_source, mixed_target))
+        # Extra structural braces are never harmless translation prose.
+        self.assertFalse(
+            format_ok("{[=1]?[#1]:[#2]}", "{[=1]?[#1]:[#2]}}")
+        )
+        # Visible punctuation may move around a nested condition, but the
+        # structural branch delimiter and technical atoms stay in place.
+        self.assertTrue(
+            format_ok(
+                "{[outer]?Items {[inner]?rare:common}:}",
+                "{[outer]?Öğeler; {[inner]?nadir:yaygın}:}",
+            )
+        )
+        self.assertTrue(
+            format_ok(
+                "{[+3]?<b>[#3]</b> Damage:}",
+                "{[+3]?<b>Hasar — [#3]</b>:}",
+            )
+        )
+
+        # The release auditor uses an intentionally duplicated parser; keep
+        # the two implementations locked to the same fail-closed behavior.
+        import sys
+
+        sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "Kaynak_Kodu"))
+        from wakfu_audit import format_ok as audit_format_ok  # type: ignore
+
+        self.assertFalse(audit_format_ok(mixed_source, mixed_target))
+        self.assertFalse(audit_format_ok("{[=1]?[#1]:[#2]}", "{[=1]?[#1]:[#2]}}"))
+
+    def test_stale_manual_approval_is_not_reused_after_source_change(self) -> None:
+        record = Record(
+            "texts_en.properties:damage#1",
+            "texts_en.properties",
+            "damage",
+            1,
+            "Deals 40 damage.",
+        )
+        proposals, origins = resolve_changes(
+            [record],
+            translations={},
+            manual={"damage": "20 hasar verir."},
+            terms=({}, {}, {}),
+            argos=lambda _text: "40 hasar verir.",
+            source_metadata={
+                "manual": {"damage": [source_fingerprint("Deals 20 damage.")]}
+            },
+        )
+        self.assertEqual(proposals[record.identity], "40 hasar verir.")
+        self.assertEqual(origins[record.identity], "argos")
+
+    def test_stale_glossary_key_approval_is_not_reused_after_source_change(self) -> None:
+        record = Record(
+            "texts_en.properties:damage#1",
+            "texts_en.properties",
+            "damage",
+            1,
+            "Deals 40 damage.",
+        )
+        proposals, origins = resolve_changes(
+            [record],
+            translations={},
+            manual={},
+            terms=({"damage": "20 hasar verir."}, {}, {}),
+            argos=lambda _text: "40 hasar verir.",
+            source_metadata={
+                "glossary_keys": {"damage": [source_fingerprint("Deals 20 damage.")]}
+            },
+        )
+        self.assertEqual(proposals[record.identity], "40 hasar verir.")
+        self.assertEqual(origins[record.identity], "argos")
 
     def test_reviewed_translation_carries_new_simple_suffix_marker(self) -> None:
         record = Record(
@@ -231,6 +307,7 @@ class PipelineSimulation(unittest.TestCase):
             manual={"content.14.849": "\u015eans T\u0131ls\u0131m\u0131"},
             terms=({}, {}, {}),
             argos=None,
+            source_metadata={"manual": {"content.14.849": [source_fingerprint("Lucky Charm{[~1]?s:}")]}},
         )
         self.assertEqual(proposals[record.identity], "\u015eans T\u0131ls\u0131m\u0131{[~1]?s:}")
         self.assertEqual(origins[record.identity], "manual")
@@ -249,6 +326,7 @@ class PipelineSimulation(unittest.TestCase):
             manual={"encyclopedia.monster.type": "Ar\u015fcanavar{[~1]?lar:}"},
             terms=({}, {}, {}),
             argos=None,
+            source_metadata={"manual": {"encyclopedia.monster.type": [source_fingerprint("Archmonster{[~1]?s:}")]}},
         )
         self.assertEqual(proposals[record.identity], "Ar\u015fcanavar{[~1]?lar:}")
 

@@ -1,1 +1,12 @@
-{}
+{
+  "schema": 3,
+  "source_sha1": "ab82f6455c83241817865e76e2805402b7fb1e00",
+  "memory": {},
+  "manual": {},
+  "glossary_keys": {},
+  "invalidated": {
+    "memory": [],
+    "manual": [],
+    "glossary_keys": []
+  }
+}

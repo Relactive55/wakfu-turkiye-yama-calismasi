@@ -106,6 +106,8 @@ jobs:
           set -euo pipefail
           echo "RELEASE_DIR=${RUNNER_TEMP}/wakfu-release-assets" >> "${GITHUB_ENV}"
           echo "VERIFY_DIR=${RUNNER_TEMP}/wakfu-release-verify" >> "${GITHUB_ENV}"
+          echo "DIAGNOSTIC_DIR=${RUNNER_TEMP}/wakfu-release-diagnostics" >> "${GITHUB_ENV}"
+          echo "WAKFU_RELEASE_DIAGNOSTIC_DIR=${RUNNER_TEMP}/wakfu-release-diagnostics" >> "${GITHUB_ENV}"
       - name: Assert the checked-out source is main
         shell: bash
         run: |
@@ -118,6 +120,7 @@ jobs:
         run: |
           set -euo pipefail
           rm -rf "${RELEASE_DIR}"
+          rm -rf "${DIAGNOSTIC_DIR}"
           python -m automation.release_pipeline \
             --test-fixture \
             --output-dir "${RELEASE_DIR}" \
@@ -129,10 +132,19 @@ jobs:
         run: |
           set -euo pipefail
           rm -rf "${RELEASE_DIR}"
+          rm -rf "${DIAGNOSTIC_DIR}"
           python -m automation.build_approved_release \
             --game-version "${{ needs.resolve-release-inputs.outputs.game_version }}" \
             --patch-version "${{ needs.resolve-release-inputs.outputs.patch_version }}" \
             --output-dir "${RELEASE_DIR}" | tee "${RUNNER_TEMP}/release-build.json"
+      - name: Upload release diagnostics on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wakfu-release-diagnostics-${{ github.run_id }}
+          path: ${{ env.DIAGNOSTIC_DIR }}
+          if-no-files-found: warn
+          retention-days: 14
       - name: Enforce the two-asset release contract
         shell: bash
         run: |

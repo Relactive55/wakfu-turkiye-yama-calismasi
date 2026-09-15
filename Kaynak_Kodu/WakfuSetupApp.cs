@@ -18,8 +18,8 @@ using Microsoft.Win32;
 [assembly: AssemblyCompany("Wakfu Türkçe Yama Topluluğu")]
 [assembly: AssemblyProduct("Wakfu Türkçe Yama")]
 [assembly: AssemblyCopyright("Copyright © 2026 Wakfu Türkçe Yama Topluluğu")]
-[assembly: AssemblyVersion("6.5.11.0")]
-[assembly: AssemblyFileVersion("6.5.11.0")]
+[assembly: AssemblyVersion("6.5.12.0")]
+[assembly: AssemblyFileVersion("6.5.12.0")]
 [assembly: AssemblyInformationalVersion("Wakfu Türkçe Yama")]
 
 static class WakfuSetupApp {
@@ -630,9 +630,11 @@ static class WakfuSetupApp {
                 string patch=InstalledPatchVersion(game);if(!String.IsNullOrWhiteSpace(patch))patchStatus.Text="Türkçe yama yüklü: "+patch;else if(IsLegacyPatchedInstallation(game))patchStatus.Text="Türkçe yama yüklü: sürüm bilgisi eski kurulum kaydında yok.";else if(OriginalGameFiles(game))patchStatus.Text="Oyun dosyaları orijinal.";else patchStatus.Text="Yama durumu: tespit edilemedi.";
             }catch{gameVersionStatus.Text="Yüklü oyun sürümü: okunamadı.";patchStatus.Text="Yama durumu: okunamadı.";}
         }
-        async void Run(Action action,string ok){try{Enabled=false;UseWaitCursor=true;status.Text="İşlem yapılıyor…";await Task.Run(action);RefreshLocalStatus();status.Text=ok;MessageBox.Show(ok,"İşlem tamam",MessageBoxButtons.OK,MessageBoxIcon.Information);}catch(Exception ex){MessageBox.Show(ex.Message,"İşlem hatası",MessageBoxButtons.OK,MessageBoxIcon.Error);}finally{UseWaitCursor=false;Enabled=true;}}
+        async void Run(Action action,string ok){try{Enabled=false;UseWaitCursor=true;status.Text="İşlem yapılıyor…";await Task.Run(action);RefreshLocalStatus();status.Text=ok;MessageBox.Show(ok,"İşlem tamam",MessageBoxButtons.OK,MessageBoxIcon.Information);}catch(Exception ex){status.Text=InstallFailureStatus(ex);MessageBox.Show(ex.Message,"İşlem hatası",MessageBoxButtons.OK,MessageBoxIcon.Error);}finally{UseWaitCursor=false;Enabled=true;}}
         sealed class Candidate { internal LatestPatchRelease Release; internal PatchManifest Manifest; }
         void SetReleaseStatus(string text){if(IsDisposed)return;if(InvokeRequired){BeginInvoke((Action)(()=>SetReleaseStatus(text)));return;}status.Text=text;}
+        static TransactionFailureException FindTransactionFailure(Exception error){for(Exception current=error;current!=null;current=current.InnerException){var transaction=current as TransactionFailureException;if(transaction!=null)return transaction;}return null;}
+        static string InstallFailureStatus(Exception error){var transaction=FindTransactionFailure(error);if(transaction==null)return "Kurulum başarısız; oyun dosyaları değiştirilmedi.";if(transaction.RollbackCompleted)return "Kurulum başarısız; yapılan dosya değişiklikleri geri alındı.";return "Kurulum başarısız; geri alma tamamlanamadı. Kurtarma klasörü: "+transaction.TransactionRoot;}
         async void CheckLatestRelease(){
             SetReleaseStatus("Güncellemeler kontrol ediliyor...");
             try{Candidate candidate=await Task.Run(()=>{var release=WakfuReleaseUpdater.GetLatestRelease();return new Candidate{Release=release,Manifest=WakfuReleaseUpdater.GetManifest(release)};});availableRelease=candidate.Release;availableManifest=candidate.Manifest;RefreshLocalStatus();string local=InstalledPatchVersion(path.Text);
@@ -644,7 +646,7 @@ static class WakfuSetupApp {
         async void InstallAvailableRelease(){
             if(availableRelease==null||availableManifest==null){SetReleaseStatus("Önce güncelleme kontrolünün tamamlanması gerekiyor.");return;}
             try{Enabled=false;UseWaitCursor=true;string profile=SelectedOverheadProfile();await Task.Run(()=>InstallReleasedPatch(path.Text,profile,availableRelease,availableManifest,SetReleaseStatus));RefreshLocalStatus();SetReleaseStatus("Kurulum tamamlandı: Türkçe yama "+availableManifest.PatchVersion+".");MessageBox.Show("Kurulum tamamlandı.","İşlem tamam",MessageBoxButtons.OK,MessageBoxIcon.Information);}
-            catch(Exception ex){SetReleaseStatus("Kurulum başarısız; mevcut yama korundu.");MessageBox.Show(ex.Message,"İşlem hatası",MessageBoxButtons.OK,MessageBoxIcon.Error);}finally{UseWaitCursor=false;Enabled=true;}
+            catch(Exception ex){SetReleaseStatus(InstallFailureStatus(ex));MessageBox.Show(ex.Message,"İşlem hatası",MessageBoxButtons.OK,MessageBoxIcon.Error);}finally{UseWaitCursor=false;Enabled=true;}
         }
     }
 }

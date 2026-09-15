@@ -28,7 +28,7 @@ try{
         if(-not(Test-Path -LiteralPath $source)){throw "Program bileşeni eksik: $source"}
         Copy-Item -LiteralPath $source -Destination (Join-Path $packageRoot ('Kaynak_Kodu\'+$name))
     }
-    foreach($name in @('wakfu_tr_ceviri.json','terim_duzeltmeleri.json','manual_repairs_v23.json','Wakfu_GPU_Baglam.json')){
+    foreach($name in @('wakfu_tr_ceviri.json','terim_duzeltmeleri.json','manual_repairs_v23.json','translation_memory_sources.json','Wakfu_GPU_Baglam.json')){
         $source=Join-Path $projectRoot ('Ceviri_Verileri\'+$name)
         if(Test-Path -LiteralPath $source){Copy-Item -LiteralPath $source -Destination (Join-Path $packageRoot ('Ceviri_Verileri\'+$name))}
     }

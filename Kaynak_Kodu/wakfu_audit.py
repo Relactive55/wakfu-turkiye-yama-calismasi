@@ -1,5 +1,6 @@
 import argparse
 import collections
+import hashlib
 import json
 import os
 import re
@@ -27,6 +28,8 @@ FORMAT_TOKEN_RE = re.compile(
     r"[A-Za-z][A-Za-z0-9_.-]{0,31})\]|<(?:[^<>\"']|\"[^\"]*\"|'[^']*')*>|%[A-Za-z_][A-Za-z0-9_.-]*%"
 )
 CONDITIONAL_HEADER_RE = re.compile(r"\{\[[^\]]+\]\?")
+LEGACY_CONDITIONAL_HEADER_RE = re.compile(r"\{\[[^?\r\n]{0,128}\?")
+NORMAL_CONDITIONAL_HEADER_RE = re.compile(r"\{\[[^\]{}\r\n?]*\]\?")
 ENGLISH_RE = re.compile(
     r"(?i)\b(the|and|you|your|with|from|into|must|cannot|available|unavailable|"
     r"default|damage|mastery|characteristics|recommended|rarity|pockets|page|click|level|"
@@ -670,6 +673,48 @@ def load_json(path, default):
         return default
 
 
+SOURCE_HASH_RE = re.compile(r"^[0-9a-fA-F]{64}$")
+
+
+def source_package_sha1(path):
+    digest = hashlib.sha1()
+    with open(path, "rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def source_metadata_matches(metadata, namespace, key, source, package_sha1=None):
+    """Require a source-bound approval for manual, glossary, or TM values."""
+    if not isinstance(metadata, dict):
+        return False
+    bucket = metadata.get(namespace)
+    if not isinstance(bucket, dict):
+        if namespace == "memory" and not any(name in metadata for name in ("memory", "manual", "glossary_keys", "invalidated")):
+            bucket = metadata
+        else:
+            bucket = {}
+    raw = bucket.get(key)
+    if isinstance(raw, str):
+        values = [raw]
+    elif isinstance(raw, (list, tuple, set)):
+        values = list(raw)
+    elif isinstance(raw, dict):
+        values = raw.get("sources", [])
+        if isinstance(values, str):
+            values = [values]
+    else:
+        values = []
+    expected = hashlib.sha256(str(source).encode("utf-8")).hexdigest()
+    if any(isinstance(value, str) and SOURCE_HASH_RE.fullmatch(value) and value.casefold() == expected for value in values):
+        return True
+    if not isinstance(package_sha1, str) or str(metadata.get("source_sha1", "")).casefold() != package_sha1.casefold():
+        return False
+    invalidated = metadata.get("invalidated", {})
+    keys = invalidated.get(namespace, []) if isinstance(invalidated, dict) else []
+    return isinstance(keys, list) and key not in keys
+
+
 def read_properties(jar_path):
     with zipfile.ZipFile(jar_path, "r") as archive:
         name = "texts_en.properties"
@@ -829,25 +874,71 @@ def strip_probable_proper_names(text):
     return pattern.sub(" ", text)
 
 
-def _legacy_format_structure(text):
-    """Retain compatibility with legacy conditionals lacking a false branch."""
-    headers = tuple(match.group(0).casefold() for match in CONDITIONAL_HEADER_RE.finditer(text))
-    stripped = CONDITIONAL_HEADER_RE.sub(" ", text)
+def _legacy_body_structure(text):
+    """Capture only technical atoms in one legacy conditional body."""
+    # Keep compatibility local to malformed historical conditionals.  Both
+    # ``{[condition?`` and ``{[condition] ?`` occur in shipped strings; their
+    # visible branch prose is not part of the format signature.
+    headers = tuple(match.group(0).casefold() for match in LEGACY_CONDITIONAL_HEADER_RE.finditer(text))
+    stripped = LEGACY_CONDITIONAL_HEADER_RE.sub(" ", text)
     ordinary = tuple(match.group(0).casefold() for match in FORMAT_TOKEN_RE.finditer(stripped))
-    punctuation = tuple(char for char in stripped if char in "{}?:")
-    return ("legacy", headers, ordinary, punctuation, text.count("{"), text.count("}"))
+    punctuation = tuple(char for char in stripped if char in "{}:")
+    return (headers, ordinary, punctuation, text.count("{"), text.count("}"))
 
 
 def _format_structure(text):
     """Return nested format atoms, retaining which conditional branch owns each."""
+
+    def legacy_conditional(start):
+        """Parse one historical conditional without weakening its siblings."""
+        bracket_end = text.find("]", start + 2)
+        question = text.find("?", start + 2)
+        if bracket_end >= 0 and (question < 0 or bracket_end < question):
+            cursor = bracket_end + 1
+            while cursor < len(text) and text[cursor].isspace():
+                cursor += 1
+            if cursor < len(text) and text[cursor] == "?":
+                body_start = cursor + 1
+                header = text[start:body_start]
+            else:
+                body_start = bracket_end + 1
+                header = text[start:body_start]
+        elif question >= 0:
+            body_start = question + 1
+            header = text[start:body_start]
+        else:
+            return ("legacy-conditional", text[start:].casefold(), ()), len(text)
+        depth = 1
+        index = body_start
+        while index < len(text):
+            char = text[index]
+            if char == "\\":
+                index += 2
+                continue
+            if char == "{":
+                depth += 1
+            elif char == "}":
+                depth -= 1
+                if depth == 0:
+                    body = text[body_start:index]
+                    return (
+                        "legacy-conditional",
+                        header.casefold(),
+                        _legacy_body_structure(body),
+                    ), index + 1
+            index += 1
+        body = text[body_start:]
+        return (
+            "legacy-conditional-unbalanced",
+            header.casefold(),
+            _legacy_body_structure(body),
+        ), len(text)
 
     def segment(index, stops):
         nodes = []
         while index < len(text):
             if text.startswith("{[", index):
                 conditional, index = parse_conditional(index)
-                if conditional is None:
-                    return None, index, None
                 nodes.append(conditional)
                 continue
             char = text[index]
@@ -860,25 +951,28 @@ def _format_structure(text):
                 nodes.append(("atom", match.group(0).casefold()))
                 index = match.end()
                 continue
+            if char in "{}":
+                nodes.append(("brace", char))
             index += 1
         return tuple(nodes), index, None
 
     def parse_conditional(start):
-        header_end = text.find("]?", start + 2)
-        if header_end < 0:
-            return None, start
+        header_match = NORMAL_CONDITIONAL_HEADER_RE.match(text, start)
+        if header_match is None:
+            return legacy_conditional(start)
+        header_end = header_match.end() - 2
         first, separator, delimiter = segment(header_end + 2, {":", "}"})
         if first is None or delimiter != ":":
-            return None, start
+            return legacy_conditional(start)
         second, close, delimiter = segment(separator + 1, {"}"})
         if second is None or delimiter != "}":
-            return None, start
+            return legacy_conditional(start)
         header = text[start : header_end + 2].casefold()
         return ("conditional", header, first, second), close + 1
 
     structure, end, delimiter = segment(0, set())
     if structure is None or delimiter is not None or end != len(text):
-        return _legacy_format_structure(text)
+        return ("invalid-format", text.count("{"), text.count("}"))
     return structure
 
 
@@ -1745,6 +1839,7 @@ def main():
     parser.add_argument("--project", required=True)
     parser.add_argument("--terminology", required=True)
     parser.add_argument("--manual-repairs")
+    parser.add_argument("--source-metadata")
     parser.add_argument("--live-log")
     parser.add_argument("--output-dir", required=True)
     parser.add_argument("--stage", required=True)
@@ -1758,6 +1853,13 @@ def main():
         else Path(args.project).with_name("manual_repairs_v23.json")
     )
     manual_repairs = load_json(manual_path, {}) if manual_path.exists() else {}
+    metadata_path = (
+        Path(args.source_metadata)
+        if args.source_metadata
+        else Path(args.project).with_name("translation_memory_sources.json")
+    )
+    source_metadata = load_json(metadata_path, {}) if metadata_path.exists() else {}
+    source_sha1 = source_package_sha1(args.source_jar)
     term_keys = terminology.get("keys", {})
     term_values = terminology.get("values", {})
     term_phrases = sorted(terminology.get("phrases", {}).items(), key=lambda pair: len(pair[0]), reverse=True)
@@ -1849,14 +1951,22 @@ def main():
             # bile kaynak İngilizceye geri düşmemelidir. Bu aynı zamanda audit,
             # ana program, statik JAR ve güncellemeye uyarlanan setup çıktısının
             # aynı öncelik sırasını kullanmasını sağlar.
-            forced_term_key = key in term_keys
+            manual_allowed = key in manual_repairs and source_metadata_matches(
+                source_metadata, "manual", key, source, source_sha1
+            )
+            memory_allowed = key in translations and source_metadata_matches(
+                source_metadata, "memory", key, source, source_sha1
+            )
+            forced_term_key = key in term_keys and source_metadata_matches(
+                source_metadata, "glossary_keys", key, source, source_sha1
+            )
             forced_term_value = (
                 source in term_values
                 and not (linked_skill_name or linked_item_name or forced_item_name)
                 and key.startswith(VISIBLE_WORLD_LABEL_PREFIXES)
             )
             reviewed_haven_translation = (
-                key in translations
+                memory_allowed
                 and is_reviewed_haven_translation(source, str(translations[key]))
             )
             if linked_skill_name:
@@ -1871,10 +1981,10 @@ def main():
             elif forced_item_name:
                 target = source
                 provider = "ORIJINAL_WAKFU_ADI"
-            elif key in manual_repairs:
+            elif manual_allowed:
                 target = str(manual_repairs[key])
                 provider = "ELLE_DOGRULANMIS_DUZELTME"
-            elif key in translations:
+            elif memory_allowed:
                 target = str(translations[key])
                 provider = live_methods.get(key, {}).get("method", "CEVIRI_BELLEGI")
             elif forced_term_key:
@@ -1883,7 +1993,7 @@ def main():
             elif forced_term_value:
                 target = str(term_values[source])
                 provider = "TERIM_SOZLUGU"
-            elif key in MANUAL_PROTECTED_TRANSLATION_KEYS and key in translations:
+            elif key in MANUAL_PROTECTED_TRANSLATION_KEYS and memory_allowed:
                 target = str(translations[key])
                 provider = "ELLE_DOGRULANMIS_KORUNAN_ACIKLAMA"
             elif reviewed_haven_translation:
@@ -1917,7 +2027,7 @@ def main():
                         or forced_original_combat_name
                     )
                     else (
-                        (key in manual_repairs or forced_term_key or forced_term_value)
+                        (manual_allowed or forced_term_key or forced_term_value)
                         and not (
                             key in TRANSLATABLE_QUEST_ITEM_COLLISION_KEYS
                             and target.strip() == source.strip()
@@ -1934,7 +2044,7 @@ def main():
                 and not key.startswith(("content.6.", "content.8."))
                 and not (
                     (protected_key or protected_value)
-                    and not (key in manual_repairs or forced_term_key)
+                    and not (manual_allowed or forced_term_key)
                 )
             ) and provider != "ELLE_DOGRULANMIS_DUZELTME":
                 term_issue = terminology_problem(source, target, term_values)

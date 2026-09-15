@@ -154,6 +154,17 @@ def run(*, output_dir: Path, model_path: Path, model_lock: Path) -> dict[str, ob
         memory_sources = {"fixture.tm": source_fingerprint("New [#1] items")}
         manual["fixture.duplicate"] = "Yinelenen metin"
         terms[1]["Damage <b>value</b>"] = "Hasar <b>değeri</b>"
+        source_metadata = {
+            "schema": 3,
+            "memory": memory_sources,
+            "manual": {
+                "fixture.duplicate": [
+                    source_fingerprint("First duplicate"),
+                    source_fingerprint("Second duplicate"),
+                ]
+            },
+            "glossary_keys": {},
+        }
 
         translate = install_locked_model(model_path, model_lock)
         proposals, origins = resolve_changes(
@@ -163,6 +174,7 @@ def run(*, output_dir: Path, model_path: Path, model_lock: Path) -> dict[str, ob
             terms=terms,
             argos=translate,
             memory_sources=memory_sources,
+            source_metadata=source_metadata,
         )
         validate_proposals(
             diff=delta,

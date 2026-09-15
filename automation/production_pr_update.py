@@ -22,6 +22,8 @@ from .localization_pipeline import (
     Record,
     diff_records,
     format_ok,
+    glossary_key_source_matches,
+    manual_source_matches,
     memory_source_matches,
     records_from_jar,
     resolve_changes,
@@ -54,6 +56,69 @@ _DUPLICATE_FORMAT_ATOM = re.compile(
 
 def _load(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8-sig"))
+
+
+def _normalize_source_metadata(value: object) -> dict:
+    """Normalize the source-approval sidecar without trusting legacy shapes."""
+    if not isinstance(value, dict):
+        raise VerificationError("translation memory source metadata is invalid")
+    # A pre-schema-3 flat map was memory-only.  Preserve it in that namespace
+    # while making manual and glossary-key approvals explicitly empty.
+    if not any(name in value for name in ("memory", "manual", "glossary_keys", "invalidated")):
+        value = {"memory": dict(value)}
+    metadata = dict(value)
+    try:
+        schema = int(metadata.get("schema", 0) or 0)
+    except (TypeError, ValueError):
+        schema = 0
+    metadata["schema"] = max(3, schema)
+    for namespace in ("memory", "manual", "glossary_keys"):
+        bucket = metadata.get(namespace)
+        metadata[namespace] = dict(bucket) if isinstance(bucket, dict) else {}
+    invalidated = metadata.get("invalidated")
+    if not isinstance(invalidated, dict):
+        invalidated = {}
+    metadata["invalidated"] = {
+        namespace: sorted({str(key) for key in invalidated.get(namespace, []) if isinstance(key, str)})
+        if isinstance(invalidated.get(namespace), list) else []
+        for namespace in ("memory", "manual", "glossary_keys")
+    }
+    return metadata
+
+
+def _append_source_hash(metadata: dict, namespace: str, key: str, source: str) -> None:
+    bucket = metadata.setdefault(namespace, {})
+    existing = bucket.get(key)
+    values = [existing] if isinstance(existing, str) else list(existing) if isinstance(existing, list) else []
+    digest = source_fingerprint(source)
+    if digest not in values:
+        values.append(digest)
+    bucket[key] = sorted(set(values))
+
+
+def _seed_source_metadata(metadata: dict, records: list[Record], manual_keys: object, term_keys: object, translation_keys: object) -> None:
+    """Bind legacy records to the exact approved baseline text.
+
+    This keeps unchanged translations usable after migration while modified
+    keys are still forced through the strict per-record check below.
+    """
+    wanted = {
+        "manual": set(manual_keys) if isinstance(manual_keys, dict) else set(),
+        "glossary_keys": set(term_keys) if isinstance(term_keys, dict) else set(),
+        "memory": set(translation_keys) if isinstance(translation_keys, dict) else set(),
+    }
+    for record in records:
+        for namespace, keys in wanted.items():
+            if record.key in keys:
+                _append_source_hash(metadata, namespace, record.key, record.source)
+
+
+def _invalidate_changed_keys(metadata: dict, records: list[Record]) -> None:
+    changed = sorted({record.key for record in records})
+    for namespace in ("memory", "manual", "glossary_keys"):
+        current = set(metadata.setdefault("invalidated", {}).setdefault(namespace, []))
+        current.update(changed)
+        metadata["invalidated"][namespace] = sorted(current)
 
 
 def _write_properties(source: Path, output: Path, proposals: dict[str, str]) -> None:
@@ -245,21 +310,25 @@ def run(
             return {"status": "NO_CHANGES", "game_version": version, "source_sha1": entry.sha1, "diff": counts}
 
         translations = _load(TRANSLATION_PATH)
-        memory_sources = _load(MEMORY_SOURCES_PATH) if MEMORY_SOURCES_PATH.is_file() else {}
-        if not isinstance(memory_sources, dict):
-            raise VerificationError("translation memory source metadata is invalid")
+        raw_source_metadata = _load(MEMORY_SOURCES_PATH) if MEMORY_SOURCES_PATH.is_file() else {}
+        source_metadata = _normalize_source_metadata(raw_source_metadata)
+        # A package-level source identity is used only for legacy unchanged
+        # entries by the builder/audit.  New or modified records below always
+        # require one of the per-key hashes seeded from the approved baseline.
+        source_metadata.setdefault("source_sha1", approved_sha1)
         manual = _load(MANUAL_PATH)
         glossary = _load(TERMS_PATH)
         terms = (glossary.get("keys", {}), glossary.get("values", {}), glossary.get("phrases", {}))
+        _seed_source_metadata(source_metadata, before, manual, terms[0], translations)
         unresolved = [
             record
             for record in delta["NEW"] + delta["MODIFIED"]
-            if record.key not in manual
+            if not manual_source_matches(record, source_metadata)
             and not (
                 translations.get(record.key)
-                and memory_source_matches(record, memory_sources)
+                and memory_source_matches(record, source_metadata)
             )
-            and record.key not in terms[0]
+            and not glossary_key_source_matches(record, source_metadata)
             and record.source not in terms[1]
         ]
         translate = None
@@ -304,7 +373,8 @@ def run(
                 manual=manual,
                 terms=terms,
                 argos=translate,
-                memory_sources=memory_sources,
+                memory_sources=source_metadata,
+                source_metadata=source_metadata,
             )
         except TranslationProviderUnavailable:
             if not allow_provider_unavailable:
@@ -314,17 +384,38 @@ def run(
 
         by_key = coalesce_proposals_by_key(delta["NEW"] + delta["MODIFIED"], proposals)
         source_by_key: dict[str, str] = {}
+        records_by_key: dict[str, list[Record]] = {}
+        origins_by_key: dict[str, set[str]] = {}
         for record in delta["NEW"] + delta["MODIFIED"]:
             source_by_key.setdefault(record.key, record.source)
+            records_by_key.setdefault(record.key, []).append(record)
+            if record.identity in origins:
+                origins_by_key.setdefault(record.key, set()).add(origins[record.identity])
         for key, value in by_key.items():
-            if key not in manual:
+            current_records = records_by_key.get(key, [])
+            manual_still_valid = bool(current_records) and all(
+                manual_source_matches(record, source_metadata) for record in current_records
+            )
+            if key not in manual or not manual_still_valid:
                 translations[key] = value
-            if key in source_by_key:
-                memory_sources[key] = source_fingerprint(source_by_key[key])
+            # Every value written to the compact translation map is a memory
+            # candidate for the next run.  Direct manual/glossary approvals
+            # are also kept in their own source-bound namespace.
+            if key in source_by_key and key in translations and translations[key] == value:
+                for record in current_records:
+                    _append_source_hash(source_metadata, "memory", key, record.source)
+            if key in source_by_key and "manual" in origins_by_key.get(key, set()):
+                for record in current_records:
+                    _append_source_hash(source_metadata, "manual", key, record.source)
+            if key in source_by_key and "glossary-key" in origins_by_key.get(key, set()):
+                for record in current_records:
+                    _append_source_hash(source_metadata, "glossary_keys", key, record.source)
+        _invalidate_changed_keys(source_metadata, delta["NEW"] + delta["MODIFIED"])
+        source_metadata["source_sha1"] = entry.sha1
 
         output_dir.mkdir(parents=True, exist_ok=True)
         TRANSLATION_PATH.write_text(json.dumps(translations, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-        atomic_json_write(MEMORY_SOURCES_PATH, memory_sources)
+        atomic_json_write(MEMORY_SOURCES_PATH, source_metadata)
         snapshot_path = ROOT / "automation" / "snapshots" / f"{version}.json"
         snapshot_path.parent.mkdir(parents=True, exist_ok=True)
         atomic_json_write(snapshot_path, current)
@@ -336,11 +427,13 @@ def run(
             "--source-jar", str(source), "--output-jar", str(candidate_jar),
             "--project", str(TRANSLATION_PATH), "--terminology", str(TERMS_PATH),
             "--manual-repairs", str(MANUAL_PATH),
+            "--source-metadata", str(MEMORY_SOURCES_PATH),
         ], cwd=ROOT, check=True, capture_output=True, text=True)
         audit = subprocess.run([
             sys.executable, str(ROOT / "Kaynak_Kodu" / "wakfu_audit.py"),
             "--source-jar", str(source), "--project", str(TRANSLATION_PATH),
             "--terminology", str(TERMS_PATH), "--manual-repairs", str(MANUAL_PATH),
+            "--source-metadata", str(MEMORY_SOURCES_PATH),
             "--output-dir", str(ROOT / "Raporlar"), "--stage", "full",
         ], cwd=ROOT, check=True, capture_output=True, text=True)
         if "AUDIT|" not in audit.stdout or not audit.stdout.strip().endswith("|0"):
