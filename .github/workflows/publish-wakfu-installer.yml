@@ -1,0 +1,158 @@
+name: Publish WAKFU Turkish installer
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      installer_version:
+        description: Installer version (for example 6.5.13)
+        required: true
+        type: string
+      patch_tag:
+        description: Stable tr-* release supplying the current i18n.jar
+        required: true
+        type: string
+      seed_installer_tag:
+        description: Existing installer-* release containing verified game resources
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-wakfu-installer-main
+  cancel-in-progress: false
+
+jobs:
+  resolve-inputs:
+    runs-on: ubuntu-latest
+    outputs:
+      should_publish: ${{ steps.resolve.outputs.should_publish }}
+      installer_version: ${{ steps.resolve.outputs.installer_version }}
+      patch_tag: ${{ steps.resolve.outputs.patch_tag }}
+      seed_installer_tag: ${{ steps.resolve.outputs.seed_installer_tag }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 2
+      - name: Resolve release inputs
+        id: resolve
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_INSTALLER_VERSION: ${{ inputs.installer_version }}
+          INPUT_PATCH_TAG: ${{ inputs.patch_tag }}
+          INPUT_SEED_INSTALLER_TAG: ${{ inputs.seed_installer_tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
+            [[ "${INPUT_INSTALLER_VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo 'installer_version must be x.y.z' >&2; exit 1; }
+            [[ "${INPUT_PATCH_TAG}" =~ ^tr-[0-9]{4}\.[0-9]{2}\.[0-9]{2}\.[0-9]+$ ]] || { echo 'patch_tag must be a stable tr-* tag' >&2; exit 1; }
+            [[ "${INPUT_SEED_INSTALLER_TAG}" =~ ^installer-[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo 'seed_installer_tag must be an installer-* tag' >&2; exit 1; }
+            printf 'should_publish=true\ninstaller_version=%s\npatch_tag=%s\nseed_installer_tag=%s\n' "${INPUT_INSTALLER_VERSION}" "${INPUT_PATCH_TAG}" "${INPUT_SEED_INSTALLER_TAG}" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+          changed=$(git diff-tree --no-commit-id --name-only -r -m "${GITHUB_SHA}" | sort -u)
+          if ! printf '%s\n' "${changed}" | grep -Eq '^(Kaynak_Kodu/(WakfuSetupApp\.cs|WakfuSetupOlustur\.ps1|Assets/)|Ceviri_Verileri/|Kaynak_Kodu/WakfuTurkceCeviri\.ps1$|\.github/workflows/publish-wakfu-installer\.yml$)'; then
+            printf 'should_publish=false\ninstaller_version=skip\npatch_tag=skip\nseed_installer_tag=skip\n' >> "${GITHUB_OUTPUT}"
+            echo 'NO_INSTALLER_CHANGE'
+            exit 0
+          fi
+          version=$(python - <<'PY'
+          import pathlib, re
+          text = pathlib.Path('Kaynak_Kodu/WakfuSetupApp.cs').read_text(encoding='utf-8')
+          match = re.search(r'AssemblyFileVersion\("([0-9]+\.[0-9]+\.[0-9]+)\.0"\)', text)
+          if not match:
+              raise SystemExit('installer AssemblyFileVersion not found')
+          print(match.group(1))
+          PY
+          )
+          patch=$(gh release list --repo "${GITHUB_REPOSITORY}" --limit 100 --json tagName,isDraft,isPrerelease,publishedAt --jq '[.[] | select((.isDraft|not) and (.isPrerelease|not) and (.tagName|test("^tr-[0-9]{4}\\.[0-9]{2}\\.[0-9]{2}\\.[0-9]+$")))] | sort_by(.publishedAt) | last.tagName')
+          seed=$(gh release list --repo "${GITHUB_REPOSITORY}" --limit 100 --json tagName,isDraft,isPrerelease,publishedAt --jq '[.[] | select((.isDraft|not) and (.isPrerelease|not) and (.tagName|test("^installer-[0-9]+\\.[0-9]+\\.[0-9]+$")))] | sort_by(.publishedAt) | last.tagName')
+          test -n "${patch}" && test -n "${seed}" || { echo 'No stable patch or seed installer release exists; run workflow_dispatch with explicit tags.' >&2; exit 1; }
+          if gh release view "installer-${version}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+            echo "Installer release already exists: installer-${version}" >&2
+            exit 1
+          fi
+          printf 'should_publish=true\ninstaller_version=%s\npatch_tag=%s\nseed_installer_tag=%s\n' "${version}" "${patch}" "${seed}" >> "${GITHUB_OUTPUT}"
+
+  package-and-release:
+    needs: resolve-inputs
+    if: needs.resolve-inputs.result == 'success' && needs.resolve-inputs.outputs.should_publish == 'true'
+    permissions:
+      contents: write
+    environment: release
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: main
+          fetch-depth: 1
+      - name: Prepare release directories
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $root = $env:GITHUB_WORKSPACE
+          New-Item -ItemType Directory -Path (Join-Path $root 'Uretilenler') -Force | Out-Null
+          New-Item -ItemType Directory -Path (Join-Path $root 'Oyun_Kaynaklari\Orijinal_Yedek') -Force | Out-Null
+          New-Item -ItemType Directory -Path (Join-Path $root 'Oyun_Kaynaklari\Yamalar') -Force | Out-Null
+          New-Item -ItemType Directory -Path (Join-Path $root 'Oyun_Kaynaklari\Fontlar') -Force | Out-Null
+          New-Item -ItemType Directory -Path (Join-Path $env:RUNNER_TEMP 'wakfu-installer-seed') -Force | Out-Null
+      - name: Download current patch and seed installer
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PATCH_TAG: ${{ needs.resolve-inputs.outputs.patch_tag }}
+          SEED_TAG: ${{ needs.resolve-inputs.outputs.seed_installer_tag }}
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $root = $env:GITHUB_WORKSPACE
+          $download = Join-Path $env:RUNNER_TEMP 'wakfu-installer-seed'
+          gh release download $env:PATCH_TAG --repo $env:GITHUB_REPOSITORY --pattern manifest.json --pattern i18n.jar --dir (Join-Path $root 'Uretilenler') --clobber
+          gh release download $env:SEED_TAG --repo $env:GITHUB_REPOSITORY --pattern '*.exe' --dir $download --clobber
+          $seedExe = Get-ChildItem -LiteralPath $download -Filter '*.exe' -File | Select-Object -First 1
+          if($null -eq $seedExe){throw 'Seed installer EXE bulunamadı.'}
+          $assembly = [Reflection.Assembly]::LoadFile($seedExe.FullName)
+          $map = [ordered]@{
+            'WakfuPatch.base_i18n.jar' = 'Oyun_Kaynaklari\Orijinal_Yedek\i18n_en.jar'
+            'WakfuPatch.almanax_bgU.class' = 'Oyun_Kaynaklari\Yamalar\almanax_bgU.class'
+          }
+          foreach($font in @('asul.ttf','asulb.ttf','bagnard.ttf','coprgtb.ttf','coprgtl.ttf','droidsansfallbackfull.ttf','fzlibian.ttf','londrina.ttf','lucidacally.ttf')){$map['WakfuPatch.'+$font]='Oyun_Kaynaklari\Fontlar\'+$font}
+          foreach($item in $map.GetEnumerator()){
+            $stream=$assembly.GetManifestResourceStream($item.Key)
+            if($null -eq $stream){throw "Seed installer kaynağı eksik: $($item.Key)"}
+            $destination=Join-Path $root $item.Value
+            try{$file=[IO.File]::Create($destination);try{$stream.CopyTo($file)}finally{$file.Dispose()}}finally{$stream.Dispose()}
+          }
+          $manifest=Get-Content -LiteralPath (Join-Path $root 'Uretilenler\manifest.json') -Raw | ConvertFrom-Json
+          $baseHash=(Get-FileHash -LiteralPath (Join-Path $root 'Oyun_Kaynaklari\Orijinal_Yedek\i18n_en.jar') -Algorithm SHA256).Hash
+          if([string]::IsNullOrWhiteSpace([string]$manifest.source_i18n_sha256) -or $baseHash -ne [string]$manifest.source_i18n_sha256){throw 'Seed installer temiz i18n_en.jar kaynağı güncel patch ile eşleşmiyor; güvenli otomatik yayın durduruldu.'}
+      - name: Build and verify installer
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $root = $env:GITHUB_WORKSPACE
+          $output = Join-Path $root ('Wakfu.Turkce.Yama.' + '${{ needs.resolve-inputs.outputs.installer_version }}' + '.exe')
+          & (Join-Path $root 'Kaynak_Kodu\WakfuSetupOlustur.ps1') -OutputPath $output
+          if($LASTEXITCODE -ne 0 -or -not(Test-Path -LiteralPath $output)){throw 'Installer derlenemedi.'}
+          $version=[Diagnostics.FileVersionInfo]::GetVersionInfo($output).FileVersion
+          if($version -ne ('${{ needs.resolve-inputs.outputs.installer_version }}' + '.0')){throw "Installer sürümü beklenenden farklı: $version"}
+          $assembly=[Reflection.Assembly]::LoadFile($output)
+          foreach($name in @('WakfuPatch.program.ico','WakfuPatch.program_background.png','WakfuPatch.distribution_manifest.json')){if($null -eq $assembly.GetManifestResourceStream($name)){throw "Installer kaynağı eksik: $name"}}
+          $hash=(Get-FileHash -LiteralPath $output -Algorithm SHA256).Hash
+          "$hash  $([IO.Path]::GetFileName($output))" | Set-Content -LiteralPath (Join-Path $root 'SHA256SUMS.txt') -Encoding ascii
+          "INSTALLER|$output|$hash"
+      - name: Publish installer release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INSTALLER_VERSION: ${{ needs.resolve-inputs.outputs.installer_version }}
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $root = $env:GITHUB_WORKSPACE
+          $tag = 'installer-' + $env:INSTALLER_VERSION
+          $exe = Join-Path $root ('Wakfu.Turkce.Yama.' + $env:INSTALLER_VERSION + '.exe')
+          gh release create $tag $exe (Join-Path $root 'SHA256SUMS.txt') --repo $env:GITHUB_REPOSITORY --target $env:GITHUB_SHA --title ('WAKFU Türkçe Yama Kurulum Aracı ' + $env:INSTALLER_VERSION) --notes ('Merge sonrası otomatik doğrulanmış kurulum aracı. Uyumlu çeviri patch kaynağı: ' + '${{ needs.resolve-inputs.outputs.patch_tag }}' + '.')
