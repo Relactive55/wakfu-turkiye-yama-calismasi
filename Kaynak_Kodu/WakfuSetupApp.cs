@@ -19,8 +19,8 @@ using Microsoft.Win32;
 [assembly: AssemblyCompany("Wakfu Türkçe Yama Topluluğu")]
 [assembly: AssemblyProduct("Wakfu Türkçe Yama")]
 [assembly: AssemblyCopyright("Copyright © 2026 Wakfu Türkçe Yama Topluluğu")]
-[assembly: AssemblyVersion("6.5.14.0")]
-[assembly: AssemblyFileVersion("6.5.14.0")]
+[assembly: AssemblyVersion("6.5.15.0")]
+[assembly: AssemblyFileVersion("6.5.15.0")]
 [assembly: AssemblyInformationalVersion("Wakfu Türkçe Yama")]
 
 static class WakfuSetupApp {
@@ -643,15 +643,14 @@ static class WakfuSetupApp {
             var supportTip=new ToolTip();supportTip.SetToolTip(support,"Shopier destek sayfasını aç");support.MouseEnter+=(s,e)=>{support.Text="Teşekkürler";support.Invalidate();};support.MouseLeave+=(s,e)=>{support.Text="DESTEK / BAĞIŞ";support.Invalidate();};support.Click+=(s,e)=>{try{System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("https://www.shopier.com/poe2tr/50856020"){UseShellExecute=true});}catch(Exception ex){MessageBox.Show("Destek sayfası açılamadı: "+ex.Message,"Bağlantı hatası",MessageBoxButtons.OK,MessageBoxIcon.Warning);}};
             status.Text="Hazır — Güncellemeler kontrol ediliyor...";status.AutoEllipsis=true;status.ForeColor=Color.White;status.Font=new Font("Segoe UI",9);status.TextAlign=ContentAlignment.MiddleCenter;
             gameVersionStatus.AutoEllipsis=true;gameVersionStatus.ForeColor=Color.WhiteSmoke;gameVersionStatus.Font=new Font("Segoe UI",11);gameVersionStatus.TextAlign=ContentAlignment.MiddleLeft;
-            patchStatus.AutoEllipsis=true;patchStatus.ForeColor=Color.FromArgb(190,198,208);patchStatus.Font=new Font("Segoe UI",8);patchStatus.TextAlign=ContentAlignment.MiddleLeft;
-            var version=new Label{Text="EXE v"+System.Diagnostics.FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location).FileVersion,Font=new Font("Segoe UI",9),ForeColor=Color.FromArgb(175,180,188),TextAlign=ContentAlignment.MiddleRight};
+            patchStatus.Visible=false;
             var brand=new Label{Text="Yapım Relactive",Font=new Font("Segoe UI",10,FontStyle.Bold|FontStyle.Italic),ForeColor=Color.FromArgb(220,150,88),TextAlign=ContentAlignment.MiddleRight};
 
             Action layoutSurface=null;layoutSurface=()=>{
                 int w=surface.ClientSize.Width,h=surface.ClientSize.Height,pad=20;int browseWidth=80;int rowY=12,rowH=28;
                 label.SetBounds(pad,rowY,120,rowH);path.SetBounds(pad+120,rowY,Math.Max(120,w-pad*2-120-browseWidth-10),rowH);wakfu.SetBounds(w-pad-browseWidth,rowY,browseWidth,rowH);
                 int gap=12;int buttonY=53;int installWidth=150;int restoreWidth=150;int supportWidth=120;int groupWidth=installWidth+restoreWidth+supportWidth+gap*2;int groupX=Math.Max(pad,(w-groupWidth)/2);install.SetBounds(groupX,buttonY,installWidth,39);restore.SetBounds(groupX+installWidth+gap,buttonY,restoreWidth,39);support.SetBounds(groupX+installWidth+gap+restoreWidth+gap,buttonY,supportWidth,39);
-                int bottomY=112;gameVersionStatus.SetBounds(pad,bottomY,170,22);status.SetBounds(200,bottomY,340,22);brand.SetBounds(545,bottomY,127,22);patchStatus.SetBounds(pad,h-24,430,18);version.SetBounds(545,h-24,127,18);
+                int bottomY=118;gameVersionStatus.SetBounds(pad,bottomY,170,22);status.SetBounds(200,bottomY,340,22);brand.SetBounds(545,bottomY,127,22);patchStatus.SetBounds(0,0,1,1);
                 overheadLabel.SetBounds(0,0,1,1);overheadSize.SetBounds(0,0,1,1);surface.Invalidate();
             };
             Action layoutForm=()=>{int margin=14;int panelHeight=160;int bottom=16;surface.SetBounds(margin,Math.Max(20,ClientSize.Height-panelHeight-bottom),Math.Max(400,ClientSize.Width-margin*2),panelHeight);layoutSurface();};
@@ -661,7 +660,7 @@ static class WakfuSetupApp {
             overheadSize.SelectedIndexChanged+=(s,e)=>{try{WriteOverheadPreference(SelectedOverheadProfile());}catch{}};
             Shown+=(s,e)=>CheckLatestRelease();
             install.Click+=(s,e)=>InstallAvailableRelease();restore.Click+=(s,e)=>{if(MessageBox.Show("Yalnızca Türkçe yama, font ve arayüz değişiklikleri kaldırılacak; yedekteki resmî oyun dosyaları geri yüklenecek. Devam edilsin mi?","Türkçe yamayı kaldır",MessageBoxButtons.YesNo,MessageBoxIcon.Warning)==DialogResult.Yes)Run(()=>Restore(path.Text),"Türkçe yama kaldırıldı; orijinal oyun dosyaları geri yüklendi.");};
-            surface.Controls.AddRange(new Control[]{label,path,wakfu,overheadLabel,overheadSize,install,restore,support,status,gameVersionStatus,patchStatus,version,brand});
+            surface.Controls.AddRange(new Control[]{label,path,wakfu,overheadLabel,overheadSize,install,restore,support,status,gameVersionStatus,brand});
             Controls.Add(background);Controls.Add(surface);background.SendToBack();surface.BringToFront();layoutForm();
         }
         void RefreshLocalStatus(){
