@@ -629,32 +629,32 @@ static class WakfuSetupApp {
             }catch{return null;}
         }
         public SetupForm(){
-            Text="Wakfu Türkçe Yama - Relactive";ClientSize=new Size(1600,920);MinimumSize=new Size(1000,650);StartPosition=FormStartPosition.CenterScreen;FormBorderStyle=FormBorderStyle.Sizable;MaximizeBox=true;Font=new Font("Segoe UI",10);BackColor=Color.FromArgb(8,16,24);ForeColor=Color.WhiteSmoke;
+            Text="Wakfu Türkçe Yama - Relactive";ClientSize=new Size(720,520);MinimumSize=Size;StartPosition=FormStartPosition.CenterScreen;FormBorderStyle=FormBorderStyle.FixedDialog;MaximizeBox=false;Font=new Font("Segoe UI",10);BackColor=Color.FromArgb(8,16,24);ForeColor=Color.WhiteSmoke;
             try{using(Stream source=Resource("program.ico"))using(var buffer=new MemoryStream()){source.CopyTo(buffer);buffer.Position=0;Icon=new Icon(buffer);}}catch{}
             var background=new PictureBox{Dock=DockStyle.Fill,SizeMode=PictureBoxSizeMode.Zoom,BackColor=Color.FromArgb(8,16,24),Image=LoadImageResource("program_background.png")};
-            var surface=new RoundedSurface();
-            var label=new Label{Text="Wakfu Oyun Klasörü",ForeColor=Color.WhiteSmoke,Font=new Font("Segoe UI",16,FontStyle.Regular),TextAlign=ContentAlignment.MiddleLeft};
-            path.Text=FindGame();path.BackColor=Color.FromArgb(35,44,56);path.ForeColor=Color.WhiteSmoke;path.BorderStyle=BorderStyle.FixedSingle;path.Font=new Font("Segoe UI",14);path.Margin=Padding.Empty;
-            var wakfu=new RoundedActionButton{Text="Gözat...",BackColor=Color.FromArgb(45,53,65),HoverColor=Color.FromArgb(62,72,86),ForeColor=Color.WhiteSmoke,Font=new Font("Segoe UI",13)};
+            var surface=new RoundedSurface{CornerRadius=12};
+            var label=new Label{Text="Wakfu Oyun Klasörü",ForeColor=Color.WhiteSmoke,Font=new Font("Segoe UI",11,FontStyle.Regular),TextAlign=ContentAlignment.MiddleLeft};
+            path.Text=FindGame();path.BackColor=Color.FromArgb(35,44,56);path.ForeColor=Color.WhiteSmoke;path.BorderStyle=BorderStyle.FixedSingle;path.Font=new Font("Segoe UI",10);path.Margin=Padding.Empty;
+            var wakfu=new RoundedActionButton{Text="Gözat...",BackColor=Color.FromArgb(45,53,65),HoverColor=Color.FromArgb(62,72,86),ForeColor=Color.WhiteSmoke,Font=new Font("Segoe UI",10)};
             var overheadLabel=new Label{Text="Nick Font Boyutu:",ForeColor=Color.Gainsboro,Visible=false};overheadSize.DropDownStyle=ComboBoxStyle.DropDownList;overheadSize.BackColor=Color.FromArgb(48,52,60);overheadSize.ForeColor=Color.WhiteSmoke;overheadSize.Items.AddRange(new object[]{"Normal (28 / 24)","Küçük (24 / 20)","Çok küçük (20 / 16) — Önerilen"});overheadSize.Visible=false;string preferred=ReadOverheadPreference();overheadSize.SelectedIndex=preferred=="normal"?0:preferred=="tiny"?2:1;
-            var install=new RoundedActionButton{Text="YAMA KUR",BackColor=Color.FromArgb(27,143,119),HoverColor=Color.FromArgb(34,169,140),ForeColor=Color.White,Font=new Font("Segoe UI",18,FontStyle.Bold)};
-            var restore=new RoundedActionButton{Text="GERİ AL",BackColor=Color.FromArgb(25,141,119),HoverColor=Color.FromArgb(34,169,140),ForeColor=Color.White,Font=new Font("Segoe UI",18,FontStyle.Bold)};
-            var support=new RoundedActionButton{Text="DESTEK / BAĞIŞ",BackColor=Color.FromArgb(20,117,221),HoverColor=Color.FromArgb(41,141,239),ForeColor=Color.White,Font=new Font("Segoe UI",18,FontStyle.Regular)};support.Cursor=Cursors.Hand;
+            var install=new RoundedActionButton{Text="YAMA KUR",BackColor=Color.FromArgb(27,143,119),HoverColor=Color.FromArgb(34,169,140),ForeColor=Color.White,Font=new Font("Segoe UI",13,FontStyle.Bold)};
+            var restore=new RoundedActionButton{Text="GERİ AL",BackColor=Color.FromArgb(25,141,119),HoverColor=Color.FromArgb(34,169,140),ForeColor=Color.White,Font=new Font("Segoe UI",13,FontStyle.Bold)};
+            var support=new RoundedActionButton{Text="DESTEK / BAĞIŞ",BackColor=Color.FromArgb(20,117,221),HoverColor=Color.FromArgb(41,141,239),ForeColor=Color.White,Font=new Font("Segoe UI",11,FontStyle.Regular)};support.Cursor=Cursors.Hand;
             var supportTip=new ToolTip();supportTip.SetToolTip(support,"Shopier destek sayfasını aç");support.MouseEnter+=(s,e)=>{support.Text="Teşekkürler";support.Invalidate();};support.MouseLeave+=(s,e)=>{support.Text="DESTEK / BAĞIŞ";support.Invalidate();};support.Click+=(s,e)=>{try{System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("https://www.shopier.com/poe2tr/50856020"){UseShellExecute=true});}catch(Exception ex){MessageBox.Show("Destek sayfası açılamadı: "+ex.Message,"Bağlantı hatası",MessageBoxButtons.OK,MessageBoxIcon.Warning);}};
-            status.Text="Hazır — Güncellemeler kontrol ediliyor...";status.AutoEllipsis=true;status.ForeColor=Color.White;status.Font=new Font("Segoe UI",13);status.TextAlign=ContentAlignment.MiddleCenter;
-            gameVersionStatus.AutoEllipsis=true;gameVersionStatus.ForeColor=Color.WhiteSmoke;gameVersionStatus.Font=new Font("Segoe UI",14);gameVersionStatus.TextAlign=ContentAlignment.MiddleLeft;
-            patchStatus.AutoEllipsis=true;patchStatus.ForeColor=Color.FromArgb(190,198,208);patchStatus.Font=new Font("Segoe UI",9);patchStatus.TextAlign=ContentAlignment.MiddleLeft;
+            status.Text="Hazır — Güncellemeler kontrol ediliyor...";status.AutoEllipsis=true;status.ForeColor=Color.White;status.Font=new Font("Segoe UI",9);status.TextAlign=ContentAlignment.MiddleCenter;
+            gameVersionStatus.AutoEllipsis=true;gameVersionStatus.ForeColor=Color.WhiteSmoke;gameVersionStatus.Font=new Font("Segoe UI",11);gameVersionStatus.TextAlign=ContentAlignment.MiddleLeft;
+            patchStatus.AutoEllipsis=true;patchStatus.ForeColor=Color.FromArgb(190,198,208);patchStatus.Font=new Font("Segoe UI",8);patchStatus.TextAlign=ContentAlignment.MiddleLeft;
             var version=new Label{Text="EXE v"+System.Diagnostics.FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location).FileVersion,Font=new Font("Segoe UI",9),ForeColor=Color.FromArgb(175,180,188),TextAlign=ContentAlignment.MiddleRight};
-            var brand=new Label{Text="Yapım Relactive",Font=new Font("Segoe UI",14,FontStyle.Bold|FontStyle.Italic),ForeColor=Color.FromArgb(220,150,88),TextAlign=ContentAlignment.MiddleRight};
+            var brand=new Label{Text="Yapım Relactive",Font=new Font("Segoe UI",10,FontStyle.Bold|FontStyle.Italic),ForeColor=Color.FromArgb(220,150,88),TextAlign=ContentAlignment.MiddleRight};
 
             Action layoutSurface=null;layoutSurface=()=>{
-                int w=surface.ClientSize.Width,h=surface.ClientSize.Height,pad=Math.Max(34,(int)(w*0.023));int browseWidth=Math.Max(150,Math.Min(190,(int)(w*0.12)));int rowY=28,rowH=48;
-                label.SetBounds(pad,rowY,220,rowH);path.SetBounds(pad+235,rowY,Math.Max(120,w-pad*2-235-browseWidth-24),rowH);wakfu.SetBounds(w-pad-browseWidth,rowY,browseWidth,rowH);
-                int gap=Math.Max(16,(int)(w*0.012));int buttonY=rowY+78;int buttonWidth=(w-pad*2-gap*2)/3;install.SetBounds(pad,buttonY,buttonWidth,78);restore.SetBounds(pad+buttonWidth+gap,buttonY,buttonWidth,78);support.SetBounds(pad+(buttonWidth+gap)*2,buttonY,buttonWidth,78);
-                int bottomY=h-66;gameVersionStatus.SetBounds(pad,bottomY,Math.Max(280,(int)(w*.30)),30);status.SetBounds((int)(w*.30),bottomY,(int)(w*.40),30);brand.SetBounds((int)(w*.70)-pad,bottomY,Math.Max(220,(int)(w*.30)),30);patchStatus.SetBounds(pad,h-36,Math.Max(420,(int)(w*.45)),22);version.SetBounds((int)(w*.70)-pad,h-36,Math.Max(220,(int)(w*.30)),22);
+                int w=surface.ClientSize.Width,h=surface.ClientSize.Height,pad=20;int browseWidth=80;int rowY=12,rowH=28;
+                label.SetBounds(pad,rowY,120,rowH);path.SetBounds(pad+120,rowY,Math.Max(120,w-pad*2-120-browseWidth-10),rowH);wakfu.SetBounds(w-pad-browseWidth,rowY,browseWidth,rowH);
+                int gap=12;int buttonY=53;int installWidth=150;int restoreWidth=150;int supportWidth=120;int groupWidth=installWidth+restoreWidth+supportWidth+gap*2;int groupX=Math.Max(pad,(w-groupWidth)/2);install.SetBounds(groupX,buttonY,installWidth,39);restore.SetBounds(groupX+installWidth+gap,buttonY,restoreWidth,39);support.SetBounds(groupX+installWidth+gap+restoreWidth+gap,buttonY,supportWidth,39);
+                int bottomY=112;gameVersionStatus.SetBounds(pad,bottomY,170,22);status.SetBounds(200,bottomY,340,22);brand.SetBounds(545,bottomY,127,22);patchStatus.SetBounds(pad,h-24,430,18);version.SetBounds(545,h-24,127,18);
                 overheadLabel.SetBounds(0,0,1,1);overheadSize.SetBounds(0,0,1,1);surface.Invalidate();
             };
-            Action layoutForm=()=>{int margin=Math.Max(28,ClientSize.Width/32);int panelHeight=Math.Max(270,Math.Min(310,ClientSize.Height/3));int bottom=Math.Max(22,ClientSize.Height/28);surface.SetBounds(margin,Math.Max(20,ClientSize.Height-panelHeight-bottom),Math.Max(400,ClientSize.Width-margin*2),panelHeight);layoutSurface();};
+            Action layoutForm=()=>{int margin=14;int panelHeight=160;int bottom=16;surface.SetBounds(margin,Math.Max(20,ClientSize.Height-panelHeight-bottom),Math.Max(400,ClientSize.Width-margin*2),panelHeight);layoutSurface();};
             Resize+=(s,e)=>layoutForm();
             RefreshLocalStatus();
             wakfu.Click+=(s,e)=>{using(var d=new FolderBrowserDialog{Description="Doğrudan Wakfu oyun klasörünü seçin"})if(d.ShowDialog()==DialogResult.OK){if(IsWakfu(d.SelectedPath)){path.Text=d.SelectedPath;RefreshLocalStatus();}else MessageBox.Show("Seçilen klasör geçerli bir Wakfu klasörü değil. İçinde contents\\i18n\\i18n_en.jar bulunmalıdır.","Geçersiz Wakfu klasörü",MessageBoxButtons.OK,MessageBoxIcon.Warning);}};
