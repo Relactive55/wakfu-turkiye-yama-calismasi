@@ -45,8 +45,7 @@ try{
     if(-not(Test-Path -LiteralPath $almanaxPatch)){throw 'Almanax istemci yaması bulunamadı.'}
     Copy-Item -LiteralPath $almanaxPatch -Destination (Join-Path $packageRoot 'Oyun_Kaynaklari\Yamalar\almanax_bgU.class')
     $almanaxPatchSource=Join-Path $projectRoot 'Oyun_Kaynaklari\Yamalar\bgU.java'
-    if(-not(Test-Path -LiteralPath $almanaxPatchSource)){throw 'Almanax istemci yamasının kaynak kodu bulunamadı.'}
-    Copy-Item -LiteralPath $almanaxPatchSource -Destination (Join-Path $packageRoot 'Oyun_Kaynaklari\Yamalar\bgU.java')
+    if(Test-Path -LiteralPath $almanaxPatchSource){Copy-Item -LiteralPath $almanaxPatchSource -Destination (Join-Path $packageRoot 'Oyun_Kaynaklari\Yamalar\bgU.java')}
     Get-ChildItem -LiteralPath (Join-Path $projectRoot 'Oyun_Kaynaklari\Fontlar') -Filter '*.ttf' -File|ForEach-Object{
         Copy-Item -LiteralPath $_.FullName -Destination (Join-Path $packageRoot ('Oyun_Kaynaklari\Fontlar\'+$_.Name))
     }

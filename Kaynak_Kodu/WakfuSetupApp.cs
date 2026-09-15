@@ -19,8 +19,8 @@ using Microsoft.Win32;
 [assembly: AssemblyCompany("Wakfu Türkçe Yama Topluluğu")]
 [assembly: AssemblyProduct("Wakfu Türkçe Yama")]
 [assembly: AssemblyCopyright("Copyright © 2026 Wakfu Türkçe Yama Topluluğu")]
-[assembly: AssemblyVersion("6.5.16.0")]
-[assembly: AssemblyFileVersion("6.5.16.0")]
+[assembly: AssemblyVersion("6.5.17.0")]
+[assembly: AssemblyFileVersion("6.5.17.0")]
 [assembly: AssemblyInformationalVersion("Wakfu Türkçe Yama")]
 
 static class WakfuSetupApp {
@@ -625,12 +625,15 @@ static class WakfuSetupApp {
     sealed class RoundedActionButton:Button {
         internal Color HoverColor;
         bool hovered;
-        internal RoundedActionButton(){FlatStyle=FlatStyle.Flat;FlatAppearance.BorderSize=0;UseVisualStyleBackColor=false;Cursor=Cursors.Hand;SetStyle(ControlStyles.UserPaint|ControlStyles.AllPaintingInWmPaint|ControlStyles.OptimizedDoubleBuffer,true);}
+        internal RoundedActionButton(){FlatStyle=FlatStyle.Flat;FlatAppearance.BorderSize=0;UseVisualStyleBackColor=false;Cursor=Cursors.Hand;SetStyle(ControlStyles.UserPaint|ControlStyles.AllPaintingInWmPaint|ControlStyles.OptimizedDoubleBuffer|ControlStyles.ResizeRedraw|ControlStyles.Opaque,true);}
         protected override void OnResize(EventArgs e){base.OnResize(e);using(var path=RoundedPath(new Rectangle(0,0,Math.Max(1,Width-1),Math.Max(1,Height-1)),12))Region=new Region(path);}
         protected override void OnMouseEnter(EventArgs e){hovered=true;Invalidate();base.OnMouseEnter(e);}
         protected override void OnMouseLeave(EventArgs e){hovered=false;Invalidate();base.OnMouseLeave(e);}
-        protected override void OnPaintBackground(PaintEventArgs e){}
-        protected override void OnPaint(PaintEventArgs e){e.Graphics.SmoothingMode=SmoothingMode.AntiAlias;e.Graphics.PixelOffsetMode=PixelOffsetMode.HighQuality;Color color=Enabled?(hovered?HoverColor:BackColor):Color.FromArgb(90,BackColor);using(var path=RoundedPath(new Rectangle(0,0,Math.Max(1,Width-1),Math.Max(1,Height-1)),12))using(var fill=new SolidBrush(color))e.Graphics.FillPath(fill,path);TextRenderer.DrawText(e.Graphics,Text,Font,ClientRectangle,ForeColor,TextFormatFlags.HorizontalCenter|TextFormatFlags.VerticalCenter|TextFormatFlags.EndEllipsis|TextFormatFlags.NoPadding);}
+        protected override void OnEnabledChanged(EventArgs e){if(!Enabled)hovered=false;base.OnEnabledChanged(e);Invalidate();}
+        protected override void OnTextChanged(EventArgs e){base.OnTextChanged(e);Invalidate();}
+        Color PaintColor(){Color active=hovered&&Enabled&&HoverColor!=Color.Empty?HoverColor:BackColor;if(Enabled)return Color.FromArgb(255,active.R,active.G,active.B);Color parent=Parent==null?Color.FromArgb(14,23,32):Parent.BackColor;return Color.FromArgb(255,(active.R+parent.R*2)/3,(active.G+parent.G*2)/3,(active.B+parent.B*2)/3);}
+        protected override void OnPaintBackground(PaintEventArgs e){e.Graphics.Clear(PaintColor());}
+        protected override void OnPaint(PaintEventArgs e){e.Graphics.SmoothingMode=SmoothingMode.AntiAlias;e.Graphics.PixelOffsetMode=PixelOffsetMode.HighQuality;Color color=PaintColor();using(var path=RoundedPath(new Rectangle(0,0,Math.Max(1,Width-1),Math.Max(1,Height-1)),12))using(var fill=new SolidBrush(color))e.Graphics.FillPath(fill,path);Color textColor=Enabled?ForeColor:Color.FromArgb(188,198,207);TextRenderer.DrawText(e.Graphics,Text,Font,ClientRectangle,textColor,TextFormatFlags.HorizontalCenter|TextFormatFlags.VerticalCenter|TextFormatFlags.EndEllipsis|TextFormatFlags.NoPadding);}
     }
     static GraphicsPath RoundedPath(Rectangle bounds,int radius){var path=new GraphicsPath();int diameter=Math.Max(2,Math.Min(radius*2,Math.Min(bounds.Width,bounds.Height)));int r=diameter-1;path.AddArc(bounds.X,bounds.Y,r,r,180,90);path.AddArc(bounds.Right-r,bounds.Y,r,r,270,90);path.AddArc(bounds.Right-r,bounds.Bottom-r,r,r,0,90);path.AddArc(bounds.X,bounds.Bottom-r,r,r,90,90);path.CloseFigure();return path;}
 
@@ -653,7 +656,7 @@ static class WakfuSetupApp {
             var install=new RoundedActionButton{Text="YAMA KUR",BackColor=Color.FromArgb(27,143,119),HoverColor=Color.FromArgb(34,169,140),ForeColor=Color.White,Font=new Font("Segoe UI",13,FontStyle.Bold)};
             var restore=new RoundedActionButton{Text="GERİ AL",BackColor=Color.FromArgb(25,141,119),HoverColor=Color.FromArgb(34,169,140),ForeColor=Color.White,Font=new Font("Segoe UI",13,FontStyle.Bold)};
             var support=new RoundedActionButton{Text="DESTEK / BAĞIŞ",BackColor=Color.FromArgb(20,117,221),HoverColor=Color.FromArgb(41,141,239),ForeColor=Color.White,Font=new Font("Segoe UI",11,FontStyle.Regular)};support.Cursor=Cursors.Hand;
-            var supportTip=new ToolTip();supportTip.SetToolTip(support,"Shopier destek sayfasını aç");support.MouseEnter+=(s,e)=>{support.Text="Teşekkürler";support.Invalidate();};support.MouseLeave+=(s,e)=>{support.Text="DESTEK / BAĞIŞ";support.Invalidate();};support.Click+=(s,e)=>{try{System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("https://www.shopier.com/poe2tr/50856020"){UseShellExecute=true});}catch(Exception ex){MessageBox.Show("Destek sayfası açılamadı: "+ex.Message,"Bağlantı hatası",MessageBoxButtons.OK,MessageBoxIcon.Warning);}};
+            var supportTip=new ToolTip();supportTip.SetToolTip(support,"Shopier destek sayfasını aç");support.MouseEnter+=(s,e)=>{support.Text="Teşekkürler";};support.MouseLeave+=(s,e)=>{support.Text="DESTEK / BAĞIŞ";};support.EnabledChanged+=(s,e)=>{if(!support.Enabled)support.Text="DESTEK / BAĞIŞ";};support.Click+=(s,e)=>{try{System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("https://www.shopier.com/poe2tr/50856020"){UseShellExecute=true});}catch(Exception ex){MessageBox.Show(this,"Destek sayfası açılamadı: "+ex.Message,"Bağlantı hatası",MessageBoxButtons.OK,MessageBoxIcon.Warning);}};
             status.Text="Hazır — Güncellemeler kontrol ediliyor...";status.AutoEllipsis=true;status.BackColor=panelColor;status.ForeColor=Color.White;status.Font=new Font("Segoe UI",9);status.TextAlign=ContentAlignment.MiddleCenter;
             gameVersionStatus.AutoEllipsis=true;gameVersionStatus.BackColor=panelColor;gameVersionStatus.ForeColor=Color.WhiteSmoke;gameVersionStatus.Font=new Font("Segoe UI",11);gameVersionStatus.TextAlign=ContentAlignment.MiddleLeft;
             patchStatus.Visible=false;
@@ -669,10 +672,10 @@ static class WakfuSetupApp {
             Action layoutForm=()=>{int margin=14;int panelHeight=160;int bottom=16;surface.SetBounds(margin,Math.Max(20,ClientSize.Height-panelHeight-bottom),Math.Max(400,ClientSize.Width-margin*2),panelHeight);layoutSurface();};
             Resize+=(s,e)=>layoutForm();
             RefreshLocalStatus();
-            wakfu.Click+=(s,e)=>{using(var d=new FolderBrowserDialog{Description="Doğrudan Wakfu oyun klasörünü seçin"})if(d.ShowDialog()==DialogResult.OK){if(IsWakfu(d.SelectedPath)){path.Text=d.SelectedPath;RefreshLocalStatus();}else MessageBox.Show("Seçilen klasör geçerli bir Wakfu klasörü değil. İçinde contents\\i18n\\i18n_en.jar bulunmalıdır.","Geçersiz Wakfu klasörü",MessageBoxButtons.OK,MessageBoxIcon.Warning);}};
+            wakfu.Click+=(s,e)=>{using(var d=new FolderBrowserDialog{Description="Doğrudan Wakfu oyun klasörünü seçin"})if(d.ShowDialog(this)==DialogResult.OK){if(IsWakfu(d.SelectedPath)){path.Text=d.SelectedPath;RefreshLocalStatus();}else MessageBox.Show(this,"Seçilen klasör geçerli bir Wakfu klasörü değil. İçinde contents\\i18n\\i18n_en.jar bulunmalıdır.","Geçersiz Wakfu klasörü",MessageBoxButtons.OK,MessageBoxIcon.Warning);}};
             overheadSize.SelectedIndexChanged+=(s,e)=>{try{WriteOverheadPreference(SelectedOverheadProfile());}catch{}};
             Shown+=(s,e)=>CheckLatestRelease();
-            install.Click+=(s,e)=>InstallAvailableRelease();restore.Click+=(s,e)=>{if(MessageBox.Show("Yalnızca Türkçe yama, font ve arayüz değişiklikleri kaldırılacak; yedekteki resmî oyun dosyaları geri yüklenecek. Devam edilsin mi?","Türkçe yamayı kaldır",MessageBoxButtons.YesNo,MessageBoxIcon.Warning)==DialogResult.Yes)Run(()=>Restore(path.Text),"Türkçe yama kaldırıldı; orijinal oyun dosyaları geri yüklendi.");};
+            install.Click+=(s,e)=>InstallAvailableRelease();restore.Click+=(s,e)=>{if(MessageBox.Show(this,"Yalnızca Türkçe yama, font ve arayüz değişiklikleri kaldırılacak; yedekteki resmî oyun dosyaları geri yüklenecek. Devam edilsin mi?","Türkçe yamayı kaldır",MessageBoxButtons.YesNo,MessageBoxIcon.Warning)==DialogResult.Yes)Run(()=>Restore(path.Text),"Türkçe yama kaldırıldı; orijinal oyun dosyaları geri yüklendi.");};
             surface.Controls.AddRange(new Control[]{label,path,wakfu,overheadLabel,overheadSize,install,restore,support,status,gameVersionStatus,brand});
             Controls.Add(background);Controls.Add(surface);background.SendToBack();surface.BringToFront();layoutForm();
         }
@@ -683,7 +686,8 @@ static class WakfuSetupApp {
                 string patch=InstalledPatchVersion(game);if(!String.IsNullOrWhiteSpace(patch))patchStatus.Text="Türkçe yama yüklü: "+patch;else if(IsLegacyPatchedInstallation(game))patchStatus.Text="Türkçe yama yüklü: sürüm bilgisi eski kurulum kaydında yok.";else if(OriginalGameFiles(game))patchStatus.Text="Oyun dosyaları orijinal.";else patchStatus.Text="Yama durumu: tespit edilemedi.";
             }catch{gameVersionStatus.Text="Sürüm okunamadı";patchStatus.Text="Yama durumu: okunamadı.";}
         }
-        async void Run(Action action,string ok){try{Enabled=false;UseWaitCursor=true;status.Text="İşlem yapılıyor…";await Task.Run(action);RefreshLocalStatus();status.Text=ok;MessageBox.Show(ok,"İşlem tamam",MessageBoxButtons.OK,MessageBoxIcon.Information);}catch(Exception ex){status.Text=InstallFailureStatus(ex);MessageBox.Show(ex.Message,"İşlem hatası",MessageBoxButtons.OK,MessageBoxIcon.Error);}finally{UseWaitCursor=false;Enabled=true;}}
+        void SetBusy(bool busy){UseWaitCursor=busy;Enabled=!busy;if(!busy){Invalidate(true);Update();}}
+        async void Run(Action action,string ok){Exception failure=null;try{SetBusy(true);status.Text="İşlem yapılıyor…";await Task.Run(action);RefreshLocalStatus();status.Text=ok;}catch(Exception ex){failure=ex;status.Text=InstallFailureStatus(ex);}finally{SetBusy(false);}if(failure==null)MessageBox.Show(this,ok,"İşlem tamam",MessageBoxButtons.OK,MessageBoxIcon.Information);else MessageBox.Show(this,failure.Message,"İşlem hatası",MessageBoxButtons.OK,MessageBoxIcon.Error);}
         sealed class Candidate { internal LatestPatchRelease Release; internal PatchManifest Manifest; }
         void SetReleaseStatus(string text){if(IsDisposed)return;if(InvokeRequired){BeginInvoke((Action)(()=>SetReleaseStatus(text)));return;}status.Text=text;}
         static TransactionFailureException FindTransactionFailure(Exception error){for(Exception current=error;current!=null;current=current.InnerException){var transaction=current as TransactionFailureException;if(transaction!=null)return transaction;}return null;}
@@ -698,8 +702,8 @@ static class WakfuSetupApp {
         }
         async void InstallAvailableRelease(){
             if(availableRelease==null||availableManifest==null){SetReleaseStatus("Önce güncelleme kontrolünün tamamlanması gerekiyor.");return;}
-            try{Enabled=false;UseWaitCursor=true;string profile=SelectedOverheadProfile();await Task.Run(()=>InstallReleasedPatch(path.Text,profile,availableRelease,availableManifest,SetReleaseStatus));RefreshLocalStatus();SetReleaseStatus("Kurulum tamamlandı: Türkçe yama "+availableManifest.PatchVersion+".");MessageBox.Show("Kurulum tamamlandı.","İşlem tamam",MessageBoxButtons.OK,MessageBoxIcon.Information);}
-            catch(Exception ex){SetReleaseStatus(InstallFailureStatus(ex));MessageBox.Show(ex.Message,"İşlem hatası",MessageBoxButtons.OK,MessageBoxIcon.Error);}finally{UseWaitCursor=false;Enabled=true;}
+            Exception failure=null;try{SetBusy(true);string profile=SelectedOverheadProfile();await Task.Run(()=>InstallReleasedPatch(path.Text,profile,availableRelease,availableManifest,SetReleaseStatus));RefreshLocalStatus();SetReleaseStatus("Kurulum tamamlandı: Türkçe yama "+availableManifest.PatchVersion+".");}
+            catch(Exception ex){failure=ex;SetReleaseStatus(InstallFailureStatus(ex));}finally{SetBusy(false);}if(failure==null)MessageBox.Show(this,"Kurulum tamamlandı.","İşlem tamam",MessageBoxButtons.OK,MessageBoxIcon.Information);else MessageBox.Show(this,failure.Message,"İşlem hatası",MessageBoxButtons.OK,MessageBoxIcon.Error);
         }
     }
 }

@@ -1,0 +1,50 @@
+name: Project integrity
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: project-integrity-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python-and-data:
+    name: Python tests and data integrity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
+        with:
+          python-version: '3.11'
+      - name: Compile Python sources
+        run: python -m compileall -q automation Kaynak_Kodu
+      - name: Run unit and repository integrity tests
+        run: python -m unittest discover -s automation/tests -p 'test_*.py' -v
+
+  windows-scripts:
+    name: PowerShell and updater tests
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Parse every PowerShell source
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $failures = [Collections.Generic.List[string]]::new()
+          Get-ChildItem -Recurse -File -Filter '*.ps1' | ForEach-Object {
+            $tokens = $null
+            $errors = $null
+            [void][Management.Automation.Language.Parser]::ParseFile($_.FullName, [ref]$tokens, [ref]$errors)
+            foreach($error in $errors){$failures.Add("$($_.FullName): $($error.Message)")}
+          }
+          if($failures.Count){throw ($failures -join "`n")}
+      - name: Run release updater and transaction tests
+        shell: powershell
+        run: .\automation\tests\run_release_updater_tests.ps1

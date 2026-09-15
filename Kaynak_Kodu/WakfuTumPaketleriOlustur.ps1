@@ -27,6 +27,10 @@ $setupOutput=Join-Path $projectRoot 'Wakfu Türkçe Yama.exe'
 $setupResult=@(& (Join-Path $sourceDir 'WakfuSetupOlustur.ps1') -OutputPath $setupOutput 2>&1)
 if($LASTEXITCODE-ne0-or-not(Test-Path -LiteralPath $setupOutput)){throw ($setupResult-join"`n")}
 
+$chatOutput=Join-Path $projectRoot 'Wakfu_Sohbet_Cevirici.exe'
+$chatResult=@(& (Join-Path $sourceDir 'WakfuSohbetCeviriciOlustur.ps1') -OutputPath $chatOutput 2>&1)
+if($LASTEXITCODE-ne0-or-not(Test-Path -LiteralPath $chatOutput)){throw ($chatResult-join"`n")}
+
 $toolOutput=Join-Path $projectRoot 'Wakfu_Turkce_Ceviri_Araci.exe'
 $toolResult=@(& (Join-Path $sourceDir 'WakfuAracExeOlustur.ps1') -OutputPath $toolOutput 2>&1)
 if($LASTEXITCODE-ne0-or-not(Test-Path -LiteralPath $toolOutput)){throw ($toolResult-join"`n")}
@@ -49,10 +53,11 @@ try{
         'Belgeler',
         'Oyun_Kaynaklari\Fontlar',
         'Oyun_Kaynaklari\Yamalar\almanax_bgU.class',
-        'Oyun_Kaynaklari\Yamalar\bgU.java',
         'Oyun_Kaynaklari\Orijinal_Yedek\i18n_en.jar',
         'Uretilenler\i18n.jar'
     )
+    $optionalPatchSource='Oyun_Kaynaklari\Yamalar\bgU.java'
+    if(Test-Path -LiteralPath (Join-Path $projectRoot $optionalPatchSource)){$items+=$optionalPatchSource}
     $arguments=@('a','-ma5','-m5','-r','-idq','-x*\__pycache__','-x*\__pycache__\*','-x*.pyc','-x*.tmp',$tempArchive)+$items
     Push-Location -LiteralPath $projectRoot
     try{$rarResult=@(& $rarExe $arguments 2>&1)}finally{Pop-Location}
@@ -63,6 +68,7 @@ try{
 }
 
 $summary=@(
+    "CHAT|$chatOutput|$((Get-FileHash -LiteralPath $chatOutput -Algorithm SHA256).Hash)",
     "PROGRAM|$toolOutput|$((Get-FileHash -LiteralPath $toolOutput -Algorithm SHA256).Hash)",
     "SETUP|$setupOutput|$((Get-FileHash -LiteralPath $setupOutput -Algorithm SHA256).Hash)",
     "SOURCE|$sourceArchive|$((Get-FileHash -LiteralPath $sourceArchive -Algorithm SHA256).Hash)"

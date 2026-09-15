@@ -56,7 +56,7 @@ jobs:
             exit 0
           fi
           changed=$(git diff-tree --no-commit-id --name-only -r -m "${GITHUB_SHA}" | sort -u)
-          if ! printf '%s\n' "${changed}" | grep -Eq '^(Kaynak_Kodu/(WakfuSetupApp\.cs|WakfuSetupOlustur\.ps1|Assets/)|Ceviri_Verileri/|Kaynak_Kodu/WakfuTurkceCeviri\.ps1$|\.github/workflows/publish-wakfu-installer\.yml$)'; then
+          if ! printf '%s\n' "${changed}" | grep -Eq '^(Kaynak_Kodu/(WakfuSetupApp\.cs|WakfuSetupOlustur\.ps1|WakfuReleaseUpdater\.cs|Assets/)|Ceviri_Verileri/(wakfu_tr_ceviri|manual_repairs_v23|terim_duzeltmeleri|translation_memory_sources)\.json$|Kaynak_Kodu/WakfuTurkceCeviri\.ps1$|\.github/workflows/publish-wakfu-installer\.yml$)'; then
             printf 'should_publish=false\ninstaller_version=skip\npatch_tag=skip\nseed_installer_tag=skip\n' >> "${GITHUB_OUTPUT}"
             echo 'NO_INSTALLER_CHANGE'
             exit 0
@@ -70,7 +70,27 @@ jobs:
           print(match.group(1))
           PY
           )
-          patch=$(gh release list --repo "${GITHUB_REPOSITORY}" --limit 100 --json tagName,isDraft,isPrerelease,publishedAt --jq '[.[] | select((.isDraft|not) and (.isPrerelease|not) and (.tagName|test("^tr-[0-9]{4}\\.[0-9]{2}\\.[0-9]{2}\\.[0-9]+$")))] | sort_by(.publishedAt) | last.tagName')
+          localization_changed=false
+          if printf '%s\n' "${changed}" | grep -Eq '^Ceviri_Verileri/(wakfu_tr_ceviri|manual_repairs_v23|terim_duzeltmeleri|translation_memory_sources)\.json$'; then
+            localization_changed=true
+          fi
+          if [ "${localization_changed}" = true ]; then
+            # The patch and installer workflows start from the same main push.
+            # Wait for the patch release tied to this exact commit instead of
+            # silently embedding the previous release because of a race.
+            patch=''
+            for attempt in $(seq 1 60); do
+              releases_json="${RUNNER_TEMP}/installer-release-candidates.json"
+              gh api "repos/${GITHUB_REPOSITORY}/releases?per_page=100" > "${releases_json}"
+              patch=$(python -c 'import json,re,sys; releases=json.load(open(sys.argv[1], encoding="utf-8")); sha=sys.argv[2]; print(next((r["tag_name"] for r in releases if not r["draft"] and not r["prerelease"] and r["target_commitish"] == sha and re.fullmatch(r"tr-[0-9]{4}\.[0-9]{2}\.[0-9]{2}\.[0-9]+", r["tag_name"])), ""))' "${releases_json}" "${GITHUB_SHA}")
+              [ -n "${patch}" ] && break
+              echo "Waiting for the matching patch release (${attempt}/60)..."
+              sleep 10
+            done
+            test -n "${patch}" || { echo "No stable patch release for commit ${GITHUB_SHA}; refusing to build an installer with stale translations." >&2; exit 1; }
+          else
+            patch=$(gh release list --repo "${GITHUB_REPOSITORY}" --limit 100 --json tagName,isDraft,isPrerelease,publishedAt --jq '[.[] | select((.isDraft|not) and (.isPrerelease|not) and (.tagName|test("^tr-[0-9]{4}\\.[0-9]{2}\\.[0-9]{2}\\.[0-9]+$")))] | sort_by(.publishedAt) | last.tagName')
+          fi
           seed=$(gh release list --repo "${GITHUB_REPOSITORY}" --limit 100 --json tagName,isDraft,isPrerelease,publishedAt --jq '[.[] | select((.isDraft|not) and (.isPrerelease|not) and (.tagName|test("^installer-[0-9]+\\.[0-9]+\\.[0-9]+$")))] | sort_by(.publishedAt) | last.tagName')
           test -n "${patch}" && test -n "${seed}" || { echo 'No stable patch or seed installer release exists; run workflow_dispatch with explicit tags.' >&2; exit 1; }
           if gh release view "installer-${version}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
