@@ -149,7 +149,9 @@ jobs:
                   time.sleep(10)
           '@ | Set-Content -LiteralPath $downloadScript -Encoding utf8
           $sourcePath=Join-Path $root 'Oyun_Kaynaklari\Orijinal_Yedek\i18n_en.jar'
+          $env:PYTHONPATH=$root
           python $downloadScript $manifestPath $sourcePath
+          if($LASTEXITCODE -ne 0 -or -not(Test-Path -LiteralPath $sourcePath)){throw 'Ankama CDN temiz i18n_en.jar indirilemedi.'}
           $sourceHash=(Get-FileHash -LiteralPath $sourcePath -Algorithm SHA256).Hash
           if($sourceHash -ne [string]$manifest.source_i18n_sha256){throw 'Ankama CDN temiz i18n_en.jar hash doğrulaması başarısız; güvenli otomatik yayın durduruldu.'}
       - name: Build and verify installer
