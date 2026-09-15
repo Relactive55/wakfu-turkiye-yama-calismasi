@@ -56,7 +56,7 @@ jobs:
             exit 0
           fi
           changed=$(git diff-tree --no-commit-id --name-only -r -m "${GITHUB_SHA}" | sort -u)
-          if ! printf '%s\n' "${changed}" | grep -Eq '^(Kaynak_Kodu/(WakfuSetupApp\.cs|WakfuSetupOlustur\.ps1|Assets/)|Ceviri_Verileri/|Kaynak_Kodu/WakfuTurkceCeviri\.ps1$)'; then
+          if ! printf '%s\n' "${changed}" | grep -Eq '^(Kaynak_Kodu/(WakfuSetupApp\.cs|WakfuSetupOlustur\.ps1|Assets/)|Ceviri_Verileri/|Kaynak_Kodu/WakfuTurkceCeviri\.ps1$|\.github/workflows/publish-wakfu-installer\.yml$)'; then
             printf 'should_publish=false\ninstaller_version=skip\npatch_tag=skip\nseed_installer_tag=skip\n' >> "${GITHUB_OUTPUT}"
             echo 'NO_INSTALLER_CHANGE'
             exit 0
