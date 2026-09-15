@@ -15,9 +15,12 @@ $manual=Join-Path $projectRoot 'Ceviri_Verileri\manual_repairs_v23.json'
 $baseJar=Join-Path $projectRoot 'Oyun_Kaynaklari\Orijinal_Yedek\i18n_en.jar'
 $almanaxPatch=Join-Path $projectRoot 'Oyun_Kaynaklari\Yamalar\almanax_bgU.class'
 $fontDir=Join-Path $projectRoot 'Oyun_Kaynaklari\Fontlar'
+$assetDir=Join-Path $sourceDir 'Assets'
+$background=Join-Path $assetDir 'wakfu_program_background.png'
+$programIcon=Join-Path $assetDir 'wakfu_program_icon.ico'
 $fontNames=@('asul.ttf','asulb.ttf','bagnard.ttf','coprgtb.ttf','coprgtl.ttf','droidsansfallbackfull.ttf','fzlibian.ttf','londrina.ttf','lucidacally.ttf')
-$icon=(Join-Path $projectRoot 'Oyun_Kaynaklari\wakfu_patch_icon.ico')
-foreach($required in @($sourceCode,$i18nJar,$translations,$terms,$manual,$baseJar,$almanaxPatch)){if(-not(Test-Path -LiteralPath $required)){throw "Kurulum bileşeni eksik: $required"}}
+$icon=$programIcon
+foreach($required in @($sourceCode,$i18nJar,$translations,$terms,$manual,$baseJar,$almanaxPatch,$background,$programIcon)){if(-not(Test-Path -LiteralPath $required)){throw "Kurulum bileşeni eksik: $required"}}
 foreach($font in $fontNames){if(-not(Test-Path -LiteralPath (Join-Path $fontDir $font))){throw "Kurulum fontu eksik: $font"}}
 
 $staging=Join-Path $env:TEMP ('WakfuSetup_'+[Guid]::NewGuid().ToString('N'))
@@ -32,6 +35,8 @@ try{
     Copy-Item -LiteralPath $manual -Destination (Join-Path $staging 'manual_repairs_v23.json')
     Copy-Item -LiteralPath $almanaxPatch -Destination (Join-Path $staging 'almanax_bgU.class')
     Copy-Item -LiteralPath $icon -Destination (Join-Path $staging 'wakfu_patch_icon.ico')
+    Copy-Item -LiteralPath $background -Destination (Join-Path $staging 'program_background.png')
+    Copy-Item -LiteralPath $programIcon -Destination (Join-Path $staging 'program.ico')
     foreach($font in $fontNames){Copy-Item -LiteralPath (Join-Path $fontDir $font) -Destination (Join-Path $staging $font)}
 
     $mainScript=Join-Path $sourceDir 'WakfuTurkceCeviri.ps1'
@@ -41,6 +46,7 @@ try{
         'i18n.jar'=(Join-Path $staging 'i18n.jar');'base_i18n.jar'=(Join-Path $staging 'i18n_en.jar')
         'translations.json'=(Join-Path $staging 'wakfu_tr_ceviri.json');'terms.json'=(Join-Path $staging 'terim_duzeltmeleri.json')
         'manual.json'=(Join-Path $staging 'manual_repairs_v23.json');'almanax_bgU.class'=(Join-Path $staging 'almanax_bgU.class')
+        'program_background.png'=(Join-Path $staging 'program_background.png');'program.ico'=(Join-Path $staging 'program.ico')
     }
     foreach($font in $fontNames){$resourceFiles[$font]=Join-Path $staging $font}
     $resourceHashes=[ordered]@{};foreach($item in $resourceFiles.GetEnumerator()){$resourceHashes[$item.Key]=(Get-FileHash -LiteralPath $item.Value -Algorithm SHA256).Hash}
@@ -54,7 +60,7 @@ try{
     if(-not(Test-Path -LiteralPath $csc)){$csc=Join-Path $env:WINDIR 'Microsoft.NET\Framework\v4.0.30319\csc.exe'}
     if(-not(Test-Path -LiteralPath $csc)){throw '.NET Framework C# derleyicisi bulunamadı.'}
     $tempExe=Join-Path $staging 'Wakfu Türkçe Yama.exe'
-    $response=@('/nologo','/target:winexe','/optimize+','/platform:anycpu',('/out:"'+$tempExe+'"'),('/win32manifest:"'+$manifest+'"'),'/reference:System.dll','/reference:System.Core.dll','/reference:System.Web.Extensions.dll','/reference:System.Windows.Forms.dll','/reference:System.Drawing.dll','/reference:System.IO.Compression.dll','/reference:System.IO.Compression.FileSystem.dll',('/resource:"'+(Join-Path $staging 'i18n.jar')+'",WakfuPatch.i18n.jar'),('/resource:"'+(Join-Path $staging 'i18n_en.jar')+'",WakfuPatch.base_i18n.jar'),('/resource:"'+(Join-Path $staging 'wakfu_tr_ceviri.json')+'",WakfuPatch.translations.json'),('/resource:"'+(Join-Path $staging 'terim_duzeltmeleri.json')+'",WakfuPatch.terms.json'),('/resource:"'+(Join-Path $staging 'manual_repairs_v23.json')+'",WakfuPatch.manual.json'),('/resource:"'+(Join-Path $staging 'almanax_bgU.class')+'",WakfuPatch.almanax_bgU.class'),('/resource:"'+$distributionPath+'",WakfuPatch.distribution_manifest.json'))
+    $response=@('/nologo','/target:winexe','/optimize+','/platform:anycpu',('/out:"'+$tempExe+'"'),('/win32manifest:"'+$manifest+'"'),'/reference:System.dll','/reference:System.Core.dll','/reference:System.Web.Extensions.dll','/reference:System.Windows.Forms.dll','/reference:System.Drawing.dll','/reference:System.IO.Compression.dll','/reference:System.IO.Compression.FileSystem.dll',('/resource:"'+(Join-Path $staging 'i18n.jar')+'",WakfuPatch.i18n.jar'),('/resource:"'+(Join-Path $staging 'i18n_en.jar')+'",WakfuPatch.base_i18n.jar'),('/resource:"'+(Join-Path $staging 'wakfu_tr_ceviri.json')+'",WakfuPatch.translations.json'),('/resource:"'+(Join-Path $staging 'terim_duzeltmeleri.json')+'",WakfuPatch.terms.json'),('/resource:"'+(Join-Path $staging 'manual_repairs_v23.json')+'",WakfuPatch.manual.json'),('/resource:"'+(Join-Path $staging 'almanax_bgU.class')+'",WakfuPatch.almanax_bgU.class'),('/resource:"'+(Join-Path $staging 'program_background.png')+'",WakfuPatch.program_background.png'),('/resource:"'+(Join-Path $staging 'program.ico')+'",WakfuPatch.program.ico'),('/resource:"'+$distributionPath+'",WakfuPatch.distribution_manifest.json'))
     $response+='/win32icon:"'+(Join-Path $staging 'wakfu_patch_icon.ico')+'"'
     foreach($font in $fontNames){$response+='/resource:"'+(Join-Path $staging $font)+'",WakfuPatch.'+$font}
     $response+='"'+(Join-Path $staging 'WakfuReleaseUpdater.cs')+'"'
